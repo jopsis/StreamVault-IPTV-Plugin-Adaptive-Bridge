@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">InputStream Adaptive</string>
-    <string name="plugin_description">Plugin companion para listas M3U/KODIPROP estilo Kodi inputstream.adaptive en StreamVault.</string>
-    <string name="provider_name">InputStream Adaptive</string>
+    <string name="app_name">StreamVault Adaptive Bridge</string>
+    <string name="plugin_description">Puente para fuentes M3U/KODIPROP estilo Kodi inputstream.adaptive en StreamVault.</string>
+    <string name="provider_name">StreamVault Adaptive Bridge</string>
     <string name="status_ready">Listo</string>
     <string name="status_disabled">Desactivado</string>
     <string name="status_error">Error</string>
-    <string name="message_enabled">InputStream Adaptive está listo.</string>
-    <string name="message_disabled">InputStream Adaptive detenido.</string>
+    <string name="message_enabled">StreamVault Adaptive Bridge está listo.</string>
+    <string name="message_disabled">StreamVault Adaptive Bridge detenido.</string>
     <string name="message_provider_ready">La lista del proveedor está lista.</string>
     <string name="message_provider_empty">No se encontraron canales adaptativos.</string>
     <string name="message_playback_ready">Metadatos de reproducción adaptativa preparados.</string>

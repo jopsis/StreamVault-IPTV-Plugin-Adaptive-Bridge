@@ -1,20 +1,20 @@
-# StreamVault InputStream Adaptive Plugin
+# StreamVault Adaptive Bridge
 
 <p align="center">
-	<a href="https://github.com/jopsis/StreamVault-IPTV-Plugin-inputstream.adaptive/releases/latest/download/StreamVault-InputStream-Adaptive-Plugin.apk"><img src="https://img.shields.io/badge/Download-StreamVault--InputStream--Adaptive--Plugin.apk-2ea44f?style=for-the-badge&logo=android" alt="Download StreamVault InputStream Adaptive Plugin APK" /></a>
-	<a href="https://github.com/jopsis/StreamVault-IPTV-Plugin-inputstream.adaptive/releases/latest"><img src="https://img.shields.io/github/v/release/jopsis/StreamVault-IPTV-Plugin-inputstream.adaptive?display_name=tag&style=for-the-badge&color=0f766e&cacheSeconds=60" alt="Latest StreamVault InputStream Adaptive Plugin release" /></a>
-	<a href="https://github.com/jopsis/StreamVault-IPTV-Plugin-inputstream.adaptive/releases"><img src="https://img.shields.io/github/downloads/jopsis/StreamVault-IPTV-Plugin-inputstream.adaptive/total?style=for-the-badge&color=8b5cf6&cacheSeconds=60" alt="Total Downloads" /></a>
+	<a href="https://github.com/jopsis/StreamVault-IPTV-Plugin-Adaptive-Bridge/releases/latest/download/StreamVault-Adaptive-Bridge.apk"><img src="https://img.shields.io/badge/Download-StreamVault--Adaptive--Bridge.apk-2ea44f?style=for-the-badge&logo=android" alt="Download StreamVault Adaptive Bridge APK" /></a>
+	<a href="https://github.com/jopsis/StreamVault-IPTV-Plugin-Adaptive-Bridge/releases/latest"><img src="https://img.shields.io/github/v/release/jopsis/StreamVault-IPTV-Plugin-Adaptive-Bridge?display_name=tag&style=for-the-badge&color=0f766e&cacheSeconds=60" alt="Latest StreamVault Adaptive Bridge release" /></a>
+	<a href="https://github.com/jopsis/StreamVault-IPTV-Plugin-Adaptive-Bridge/releases"><img src="https://img.shields.io/github/downloads/jopsis/StreamVault-IPTV-Plugin-Adaptive-Bridge/total?style=for-the-badge&color=8b5cf6&cacheSeconds=60" alt="Total Downloads" /></a>
 	<a href="docs/Changelog.md"><img src="https://img.shields.io/badge/Changelog-View-2563eb?style=for-the-badge" alt="View changelog" /></a>
-	<a href="https://github.com/jopsis/StreamVault-IPTV-Plugin-inputstream.adaptive/actions/workflows/build-apk.yml"><img src="https://img.shields.io/github/actions/workflow/status/jopsis/StreamVault-IPTV-Plugin-inputstream.adaptive/build-apk.yml?branch=main&style=for-the-badge&label=CI" alt="GitHub Actions status" /></a>
+	<a href="https://github.com/jopsis/StreamVault-IPTV-Plugin-Adaptive-Bridge/actions/workflows/build-apk.yml"><img src="https://img.shields.io/github/actions/workflow/status/jopsis/StreamVault-IPTV-Plugin-Adaptive-Bridge/build-apk.yml?branch=main&style=for-the-badge&label=CI" alt="GitHub Actions status" /></a>
 	<a href="https://ko-fi.com/jopsis"><img src="https://img.shields.io/badge/Support-Ko--fi-ff5f5f?style=for-the-badge&logo=kofi" alt="Support on Ko-fi" /></a>
 </p>
 
-Plugin companion para StreamVault-IPTV que importa listas M3U/M3U8 propias con metadatos estilo Kodi `inputstream.adaptive` y prepara la reproduccion antes de que Media3 abra el stream.
+Plugin companion para StreamVault-IPTV que actua como puente entre listas M3U/M3U8 propias con metadatos estilo Kodi `inputstream.adaptive` y la reproduccion adaptativa de StreamVault/Media3.
 
 El plugin no incluye canales ni contenidos preconfigurados. El usuario debe proporcionar sus propias listas mediante URL remota, fichero local, ruta local o URI `content://`.
 La configuracion persistida se inicia limpia en esta version para no reutilizar fuentes heredadas de builds anteriores.
 
-Version actual del plugin: `1.1.19-beta.1` (`versionCode` 22).
+Version actual del plugin: `1.1.20-beta.1` (`versionCode` 23).
 
 ## Funcionalidad
 
@@ -128,8 +128,8 @@ Para release se pueden definir las variables `SIGNING_STORE_FILE`, `SIGNING_STOR
 
 GitHub Actions permite publicar el canal estable o beta desde `Build signed APK`.
 
-- `stable`: usa un `versionName` sin sufijos de prerelease, crea o actualiza un GitHub Release normal y mantiene el APK `StreamVault-InputStream-Adaptive-Plugin.apk`.
-- `beta`: requiere un `versionName` con sufijo `-beta`, por ejemplo `1.1.19-beta.1`, crea o actualiza un GitHub prerelease y publica el alias `StreamVault-InputStream-Adaptive-Plugin-beta.apk` sin marcarlo como latest.
+- `stable`: usa un `versionName` sin sufijos de prerelease, crea o actualiza un GitHub Release normal y mantiene el APK `StreamVault-Adaptive-Bridge.apk`.
+- `beta`: requiere un `versionName` con sufijo `-beta`, por ejemplo `1.1.20-beta.1`, crea o actualiza un GitHub prerelease y publica el alias `StreamVault-Adaptive-Bridge-beta.apk` sin marcarlo como latest.
 
 ## Instalacion
 
@@ -137,7 +137,7 @@ GitHub Actions permite publicar el canal estable o beta desde `Build signed APK`
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Despues, abrir StreamVault > Plugins > Refresh, activar `InputStream Adaptive`, abrir su configuracion, anadir una lista propia por URL, fichero, ruta local o URI `content://`, guardar y sincronizar/activar de nuevo el proveedor si ya existia una importacion anterior. Esto actualiza las URLs locales al puerto actual del plugin.
+Despues, abrir StreamVault > Plugins > Refresh, activar `StreamVault Adaptive Bridge`, abrir su configuracion, anadir una lista propia por URL, fichero, ruta local o URI `content://`, guardar y sincronizar/activar de nuevo el proveedor si ya existia una importacion anterior. Esto actualiza las URLs locales al puerto actual del plugin.
 
 ## Validacion
 

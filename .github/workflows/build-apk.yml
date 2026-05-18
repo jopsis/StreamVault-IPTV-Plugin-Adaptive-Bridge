@@ -76,11 +76,11 @@ jobs:
 
           PRERELEASE=false
           MAKE_LATEST=true
-          APK_ALIAS="StreamVault-InputStream-Adaptive-Plugin.apk"
+          APK_ALIAS="StreamVault-Adaptive-Bridge.apk"
           if [ "$RELEASE_CHANNEL" = "beta" ]; then
             PRERELEASE=true
             MAKE_LATEST=false
-            APK_ALIAS="StreamVault-InputStream-Adaptive-Plugin-beta.apk"
+            APK_ALIAS="StreamVault-Adaptive-Bridge-beta.apk"
           fi
 
           echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
@@ -112,7 +112,7 @@ jobs:
             case "$VERSION_NAME" in
               *-beta*) ;;
               *)
-                echo "::error::Beta releases must use a beta versionName, for example '1.1.19-beta.1'."
+                echo "::error::Beta releases must use a beta versionName, for example '1.1.20-beta.1'."
                 exit 1
                 ;;
             esac
@@ -186,7 +186,7 @@ jobs:
         id: artifact
         run: |
           mkdir -p dist
-          VERSIONED_APK_FILE="dist/StreamVault-InputStream-Adaptive-Plugin-${{ steps.version.outputs.version_name }}.apk"
+          VERSIONED_APK_FILE="dist/StreamVault-Adaptive-Bridge-${{ steps.version.outputs.version_name }}.apk"
           CHANNEL_APK_FILE="dist/${{ steps.release.outputs.apk_alias }}"
           cp app/build/outputs/apk/release/app-release.apk "$VERSIONED_APK_FILE"
           cp app/build/outputs/apk/release/app-release.apk "$CHANNEL_APK_FILE"
@@ -196,7 +196,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: StreamVault-InputStream-Adaptive-Plugin-${{ steps.version.outputs.version_name }}
+          name: StreamVault-Adaptive-Bridge-${{ steps.version.outputs.version_name }}
           path: dist/*.apk
           if-no-files-found: error
 

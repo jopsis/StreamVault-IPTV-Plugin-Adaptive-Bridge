@@ -12,15 +12,15 @@ Rules:
 
 ## Project Notes
 
-This is the StreamVault InputStream Adaptive companion plugin. It imports user-provided M3U/M3U8 sources with Kodi `inputstream.adaptive` metadata and exposes a local StreamVault `provider.m3u` playlist plus `playback.prepare` metadata for DASH, HLS and SmoothStreaming/ISML playback.
+This is the StreamVault Adaptive Bridge companion plugin. It imports user-provided M3U/M3U8 sources with Kodi `inputstream.adaptive` metadata and exposes a local StreamVault `provider.m3u` playlist plus `playback.prepare` metadata for DASH, HLS and SmoothStreaming/ISML playback.
 
 Core files:
 - `AdaptiveBridge.java`: central runtime, catalog refresh, local provider playlist, playback metadata, manifest proxy helpers and plugin manifest/config values.
-- `StreamVaultInputStreamAdaptivePluginService.java`: Android Messenger IPC service for the StreamVault plugin API.
+- `StreamVaultAdaptiveBridgePluginService.java`: Android Messenger IPC service for the StreamVault plugin API.
 - `AdaptiveLocalServer.java`: localhost HTTP server for `/playlist.m3u`, `/play/{channelId}`, `/manifest/{channelId}/...`, `/license/clearkey/{channelId}` and `/status.json`.
 - `KodiPropsM3uParser.java`: M3U/KODIPROP parser for manifest type, headers, DRM and ClearKey forms.
 - `AdaptiveChannel.java`: parsed channel model and playback/DRM serialization.
-- `InputStreamAdaptiveConfigActivity.java`: native configuration UI for M3U sources.
+- `AdaptiveBridgeConfigActivity.java`: native configuration UI for M3U sources.
 
 ## StreamVault Contract
 
@@ -56,7 +56,7 @@ For device checks, set `ANDROID_SERIAL` to the target device id before running A
 
 ```sh
 adb -s "$ANDROID_SERIAL" install -r app/build/outputs/apk/debug/app-debug.apk
-adb -s "$ANDROID_SERIAL" shell am start -n com.streamvault.plugin.inputstreamadaptive/.InputStreamAdaptiveConfigActivity
+adb -s "$ANDROID_SERIAL" shell am start -n com.streamvault.plugin.adaptivebridge/.AdaptiveBridgeConfigActivity
 ```
 
 Nexus 5X may not decode some HDR/HEVC Main10 streams even when the plugin correctly serves manifests, licenses and segments.

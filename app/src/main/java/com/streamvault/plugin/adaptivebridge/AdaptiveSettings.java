@@ -1,4 +1,4 @@
-package com.streamvault.plugin.inputstreamadaptive;
+package com.streamvault.plugin.adaptivebridge;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -6,8 +6,8 @@ import android.content.SharedPreferences;
 import org.json.JSONObject;
 
 final class AdaptiveSettings {
-    private static final String LEGACY_PREFS = "streamvault_inputstream_adaptive";
-    private static final String PREFS = "streamvault_inputstream_adaptive_user_sources";
+    private static final String LEGACY_PREFS = "streamvault_adaptive_bridge_legacy";
+    private static final String PREFS = "streamvault_adaptive_bridge_user_sources";
     private static final String KEY_ENABLED = "enabled";
     private static final String KEY_SOURCE_URLS = "source_urls";
     private static final String KEY_LAST_MESSAGE = "last_message";

@@ -1,4 +1,4 @@
-package com.streamvault.plugin.inputstreamadaptive;
+package com.streamvault.plugin.adaptivebridge;
 
 final class PluginContract {
     static final int API_VERSION = 1;

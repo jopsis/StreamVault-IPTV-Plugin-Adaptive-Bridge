@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">InputStream Adaptive</string>
-    <string name="plugin_description">Kodi inputstream.adaptive-style M3U/KODIPROP companion plugin for StreamVault.</string>
-    <string name="provider_name">InputStream Adaptive</string>
+    <string name="app_name">StreamVault Adaptive Bridge</string>
+    <string name="plugin_description">Bridge for Kodi inputstream.adaptive-style M3U/KODIPROP sources in StreamVault.</string>
+    <string name="provider_name">StreamVault Adaptive Bridge</string>
     <string name="status_ready">Ready</string>
     <string name="status_disabled">Disabled</string>
     <string name="status_error">Error</string>
-    <string name="message_enabled">InputStream Adaptive is ready.</string>
-    <string name="message_disabled">InputStream Adaptive stopped.</string>
+    <string name="message_enabled">StreamVault Adaptive Bridge is ready.</string>
+    <string name="message_disabled">StreamVault Adaptive Bridge stopped.</string>
     <string name="message_provider_ready">Provider playlist is ready.</string>
     <string name="message_provider_empty">No adaptive channels were found.</string>
     <string name="message_playback_ready">Adaptive playback metadata prepared.</string>
@@ -16,7 +16,7 @@
     <string name="message_settings_saved">Settings saved.</string>
     <string name="message_refresh_ok">Sources refreshed.</string>
     <string name="message_unknown_action">Unknown action.</string>
-    <string name="config_subtitle">Kodi inputstream.adaptive style lists for DASH, HLS and SmoothStreaming.</string>
+    <string name="config_subtitle">Kodi inputstream.adaptive style sources for DASH, HLS and SmoothStreaming.</string>
     <string name="label_provider">Provider</string>
     <string name="label_channel_count">%1$d channels</string>
     <string name="section_sources">M3U sources</string>

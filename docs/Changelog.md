@@ -1,18 +1,22 @@
 # Changelog
 
-## 1.1.19-beta.1 - 2026-05-18
+## 1.1.20-beta.1 - 2026-05-18
 
 ### Changed
 
+- Proyecto renombrado a StreamVault Adaptive Bridge.
+- Package Android cambiado a `com.streamvault.plugin.adaptivebridge` y plugin ID cambiado a `com.streamvault.plugins.adaptivebridge`.
+- Activity de configuracion renombrada a `AdaptiveBridgeConfigActivity` y servicio IPC a `StreamVaultAdaptiveBridgePluginService`.
 - GitHub Actions ahora permite publicar releases firmadas en canal `stable` o `beta` desde `workflow_dispatch`.
-- Los tags/versionName con sufijo `-beta` se publican como GitHub prerelease, no se marcan como latest y generan el alias `StreamVault-InputStream-Adaptive-Plugin-beta.apk`.
-- Versión beta del plugin actualizada a `1.1.19-beta.1` (`versionCode` 22).
+- Los tags/versionName con sufijo `-beta` se publican como GitHub prerelease, no se marcan como latest y generan el alias `StreamVault-Adaptive-Bridge-beta.apk`.
+- Versión beta del plugin actualizada a `1.1.20-beta.1` (`versionCode` 23).
 
 ### Validation
 
-- `graphify update .` completado correctamente.
-- Build debug completado con `:app:assembleDebug :app:printVersionName :app:printVersionCode`; Gradle confirma `1.1.19-beta.1` (`versionCode` 22).
-- APK `1.1.19-beta.1` (`versionCode` 22) instalado en Chromecast `192.168.68.62:39303`.
+- `graphify update .` completado tras el rename.
+- Build debug completado correctamente y version confirmada como `1.1.20-beta.1` (`versionCode` 23).
+- APK instalado en Chromecast y verificado con package `com.streamvault.plugin.adaptivebridge`.
+- Activity `AdaptiveBridgeConfigActivity` abierta en Chromecast y servicio `StreamVaultAdaptiveBridgePluginService` verificado para discovery `com.streamvault.plugin.API`.
 
 ## 1.1.18 - 2026-05-14
 
@@ -252,7 +256,7 @@
 
 ### Added
 
-- Proyecto Android completo para `com.streamvault.plugin.inputstreamadaptive`.
+- Proyecto Android completo para `com.streamvault.plugin.adaptivebridge`.
 - Servicio Messenger compatible con `com.streamvault.plugin.API`.
 - Manifest de plugin con capacidades `provider.m3u`, `playback.prepare` y `configuration.schema`.
 - Servidor HTTP local en `127.0.0.1:39077`.

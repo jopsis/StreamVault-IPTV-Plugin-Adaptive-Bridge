@@ -1,4 +1,4 @@
-package com.streamvault.plugin.inputstreamadaptive;
+package com.streamvault.plugin.adaptivebridge;
 
 import android.content.Context;
 import android.net.Uri;
@@ -35,9 +35,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     private static final AtomicReference<AdaptiveBridge> INSTANCE = new AtomicReference<>();
-    private static final String VERSION_NAME = "1.1.19-beta.1";
-    private static final int VERSION_CODE = 22;
-    private static final String DEFAULT_USER_AGENT = "StreamVault-InputStreamAdaptive/" + VERSION_NAME;
+    private static final String VERSION_NAME = "1.1.20-beta.1";
+    private static final int VERSION_CODE = 23;
+    private static final String DEFAULT_USER_AGENT = "StreamVault-AdaptiveBridge/" + VERSION_NAME;
     private static final long MANIFEST_FRESH_CACHE_MS = 3_000L;
     private static final long MANIFEST_STALE_FALLBACK_MS = 30_000L;
 
@@ -244,14 +244,14 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     JSONObject manifestJson() throws Exception {
         return new JSONObject()
                 .put("schemaVersion", 1)
-                .put("id", "com.streamvault.plugins.inputstreamadaptive")
-                .put("name", "InputStream Adaptive")
+                .put("id", "com.streamvault.plugins.adaptivebridge")
+                .put("name", "StreamVault Adaptive Bridge")
                 .put("versionName", VERSION_NAME)
                 .put("versionCode", VERSION_CODE)
                 .put("description", context.getString(R.string.plugin_description))
                 .put("providerName", context.getString(R.string.provider_name))
                 .put("configurationMode", "activity")
-                .put("configurationActivityAction", "com.streamvault.plugin.inputstreamadaptive.CONFIGURE")
+                .put("configurationActivityAction", "com.streamvault.plugin.adaptivebridge.CONFIGURE")
                 .put("capabilities", new JSONArray()
                         .put("provider.m3u")
                         .put("playback.prepare")
@@ -287,7 +287,7 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
                         .put("refreshAfterRun", true));
         return new JSONObject()
                 .put("schemaVersion", 1)
-                .put("title", "InputStream Adaptive")
+                .put("title", "StreamVault Adaptive Bridge")
                 .put("description", "Imports Kodi-style inputstream.adaptive M3U lists for StreamVault playback.")
                 .put("sections", sections)
                 .put("actions", actions);

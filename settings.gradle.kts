@@ -14,6 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "StreamVaultInputStreamAdaptivePlugin"
+rootProject.name = "StreamVaultAdaptiveBridgePlugin"
 
 include(":app")

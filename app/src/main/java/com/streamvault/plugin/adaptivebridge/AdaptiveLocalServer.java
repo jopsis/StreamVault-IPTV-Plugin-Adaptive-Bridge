@@ -1,4 +1,4 @@
-package com.streamvault.plugin.inputstreamadaptive;
+package com.streamvault.plugin.adaptivebridge;
 
 import android.util.Log;
 
@@ -38,10 +38,10 @@ final class AdaptiveLocalServer {
         JSONObject statusJson() throws Exception;
     }
 
-    private static final String TAG = "StreamVaultIsaServer";
+    private static final String TAG = "StreamVaultBridgeServer";
     private static final int PREFERRED_PORT = 39078;
     private static final String EMPTY_XMLTV = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-            "<tv generator-info-name=\"StreamVault InputStream Adaptive\">\n</tv>\n";
+            "<tv generator-info-name=\"StreamVault Adaptive Bridge\">\n</tv>\n";
 
     private final Handler handler;
     private final ExecutorService clientExecutor = Executors.newFixedThreadPool(6);
@@ -61,7 +61,7 @@ final class AdaptiveLocalServer {
             serverSocket = new ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"));
         }
         running = true;
-        acceptThread = new Thread(this::acceptLoop, "streamvault-isa-http");
+        acceptThread = new Thread(this::acceptLoop, "streamvault-bridge-http");
         acceptThread.start();
     }
 

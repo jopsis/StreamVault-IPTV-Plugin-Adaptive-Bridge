@@ -1,4 +1,4 @@
-package com.streamvault.plugin.inputstreamadaptive;
+package com.streamvault.plugin.adaptivebridge;
 
 import java.util.ArrayList;
 import java.util.Collections;

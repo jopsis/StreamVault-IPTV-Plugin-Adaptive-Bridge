@@ -14,7 +14,7 @@ val hasReleaseSigningConfig = listOf(
 ).all { !it.orNull.isNullOrBlank() }
 
 android {
-    namespace = "com.streamvault.plugin.inputstreamadaptive"
+    namespace = "com.streamvault.plugin.adaptivebridge"
     compileSdk = 36
 
     signingConfigs {
@@ -30,11 +30,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.streamvault.plugin.inputstreamadaptive"
+        applicationId = "com.streamvault.plugin.adaptivebridge"
         minSdk = 27
         targetSdk = 36
-        versionCode = 22
-        versionName = "1.1.19-beta.1"
+        versionCode = 23
+        versionName = "1.1.20-beta.1"
     }
 
     compileOptions {

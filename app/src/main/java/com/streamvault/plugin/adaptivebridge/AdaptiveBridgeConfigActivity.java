@@ -1,4 +1,4 @@
-package com.streamvault.plugin.inputstreamadaptive;
+package com.streamvault.plugin.adaptivebridge;
 
 import android.app.Activity;
 import android.content.ClipData;
@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class InputStreamAdaptiveConfigActivity extends Activity {
+public class AdaptiveBridgeConfigActivity extends Activity {
     private static final int REQUEST_OPEN_M3U = 1001;
     private static final int COLOR_CANVAS = 0xFF07111B;
     private static final int COLOR_PANEL = 0xEE101B2B;
@@ -447,8 +447,8 @@ public class InputStreamAdaptiveConfigActivity extends Activity {
     }
 
     private void startKeepAliveService() {
-        startService(new Intent(this, StreamVaultInputStreamAdaptivePluginService.class)
-                .setAction(StreamVaultInputStreamAdaptivePluginService.ACTION_KEEP_ALIVE));
+        startService(new Intent(this, StreamVaultAdaptiveBridgePluginService.class)
+                .setAction(StreamVaultAdaptiveBridgePluginService.ACTION_KEEP_ALIVE));
     }
 
     private void updateHeader(String status, int channels) {

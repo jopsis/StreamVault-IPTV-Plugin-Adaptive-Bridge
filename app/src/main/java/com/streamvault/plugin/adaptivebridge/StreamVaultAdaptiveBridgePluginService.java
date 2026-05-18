@@ -1,4 +1,4 @@
-package com.streamvault.plugin.inputstreamadaptive;
+package com.streamvault.plugin.adaptivebridge;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -18,9 +18,9 @@ import android.os.RemoteException;
 
 import org.json.JSONObject;
 
-public class StreamVaultInputStreamAdaptivePluginService extends Service {
-    public static final String ACTION_KEEP_ALIVE = "com.streamvault.plugin.inputstreamadaptive.KEEP_ALIVE";
-    private static final String NOTIFICATION_CHANNEL_ID = "inputstream_adaptive_proxy";
+public class StreamVaultAdaptiveBridgePluginService extends Service {
+    public static final String ACTION_KEEP_ALIVE = "com.streamvault.plugin.adaptivebridge.KEEP_ALIVE";
+    private static final String NOTIFICATION_CHANNEL_ID = "adaptive_bridge_proxy";
     private static final int NOTIFICATION_ID = 39078;
 
     private HandlerThread handlerThread;
@@ -29,7 +29,7 @@ public class StreamVaultInputStreamAdaptivePluginService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        handlerThread = new HandlerThread("streamvault-inputstream-adaptive-plugin");
+        handlerThread = new HandlerThread("streamvault-adaptive-bridge-plugin");
         handlerThread.start();
         messenger = new Messenger(new Handler(handlerThread.getLooper(), this::handleMessage));
         keepAliveIfEnabled();
@@ -128,7 +128,7 @@ public class StreamVaultInputStreamAdaptivePluginService extends Service {
             promoteToForeground();
         } else {
             stopForeground(true);
-            stopService(new Intent(this, StreamVaultInputStreamAdaptivePluginService.class));
+            stopService(new Intent(this, StreamVaultAdaptiveBridgePluginService.class));
         }
         response.putBoolean(PluginContract.KEY_SUCCESS, true);
         response.putString(
@@ -237,7 +237,7 @@ public class StreamVaultInputStreamAdaptivePluginService extends Service {
     }
 
     private void startKeepAliveService() {
-        Intent intent = new Intent(this, StreamVaultInputStreamAdaptivePluginService.class)
+        Intent intent = new Intent(this, StreamVaultAdaptiveBridgePluginService.class)
                 .setAction(ACTION_KEEP_ALIVE);
         try {
             startService(intent);
@@ -259,7 +259,7 @@ public class StreamVaultInputStreamAdaptivePluginService extends Service {
     }
 
     private Notification buildNotification() {
-        Intent configureIntent = new Intent(this, InputStreamAdaptiveConfigActivity.class)
+        Intent configureIntent = new Intent(this, AdaptiveBridgeConfigActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -270,8 +270,8 @@ public class StreamVaultInputStreamAdaptivePluginService extends Service {
                 ? new Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
                 : new Notification.Builder(this);
         return builder
-                .setSmallIcon(R.drawable.ic_inputstream_adaptive_plugin)
-                .setContentTitle("InputStream Adaptive")
+                .setSmallIcon(R.drawable.ic_adaptive_bridge_plugin)
+                .setContentTitle("StreamVault Adaptive Bridge")
                 .setContentText("Local StreamVault proxy is running.")
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
@@ -285,7 +285,7 @@ public class StreamVaultInputStreamAdaptivePluginService extends Service {
         if (manager == null || manager.getNotificationChannel(NOTIFICATION_CHANNEL_ID) != null) return;
         NotificationChannel channel = new NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
-                "InputStream Adaptive",
+                "StreamVault Adaptive Bridge",
                 NotificationManager.IMPORTANCE_LOW
         );
         channel.setDescription("Keeps the StreamVault adaptive proxy available during playback.");

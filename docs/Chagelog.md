@@ -2,18 +2,21 @@
 
 Archivo mantenido con el nombre solicitado. El changelog canonico equivalente esta en `docs/Changelog.md`.
 
-## 1.1.19-beta.1 - 2026-05-18
+## 1.1.20-beta.1 - 2026-05-18
 
 ### Changed
 
-- GitHub Actions puede publicar canal `stable` o `beta`; las versiones `-beta` salen como prerelease y usan el APK alias `StreamVault-InputStream-Adaptive-Plugin-beta.apk`.
-- Versión beta `1.1.19-beta.1` (`versionCode` 22).
+- Proyecto renombrado a StreamVault Adaptive Bridge.
+- Package Android cambiado a `com.streamvault.plugin.adaptivebridge` y plugin ID cambiado a `com.streamvault.plugins.adaptivebridge`.
+- GitHub Actions puede publicar canal `stable` o `beta`; las versiones `-beta` salen como prerelease y usan el APK alias `StreamVault-Adaptive-Bridge-beta.apk`.
+- Versión beta `1.1.20-beta.1` (`versionCode` 23).
 
 ### Validation
 
-- `graphify update .` completado correctamente.
-- Build debug completado con `:app:assembleDebug :app:printVersionName :app:printVersionCode`; Gradle confirma `1.1.19-beta.1` (`versionCode` 22).
-- APK `1.1.19-beta.1` (`versionCode` 22) instalado en Chromecast `192.168.68.62:39303`.
+- `graphify update .` completado tras el rename.
+- Build debug completado correctamente y version confirmada como `1.1.20-beta.1` (`versionCode` 23).
+- APK instalado en Chromecast y verificado con package `com.streamvault.plugin.adaptivebridge`.
+- Activity `AdaptiveBridgeConfigActivity` abierta en Chromecast y servicio `StreamVaultAdaptiveBridgePluginService` verificado para discovery `com.streamvault.plugin.API`.
 
 ## 1.1.18 - 2026-05-14
 
@@ -248,7 +251,7 @@ Archivo mantenido con el nombre solicitado. El changelog canonico equivalente es
 
 ### Added
 
-- Proyecto Android completo para `com.streamvault.plugin.inputstreamadaptive`.
+- Proyecto Android completo para `com.streamvault.plugin.adaptivebridge`.
 - Servicio Messenger compatible con `com.streamvault.plugin.API`.
 - Manifest de plugin con capacidades `provider.m3u`, `playback.prepare` y `configuration.schema`.
 - Servidor HTTP local en `127.0.0.1:39077`.
