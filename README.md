@@ -108,66 +108,9 @@ Para ISML + ClearKey, el manifest puede declarar un `ProtectionHeader` de origen
 
 Para MPD + ClearKey, algunos manifests solo declaran `ContentProtection` de otros DRM aunque la lista entregue claves ClearKey. En ese caso el plugin sirve el MPD por proxy local y anade una entrada ClearKey compatible con Android Media3.
 
-## Compilacion
-
-```sh
-JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
-ANDROID_HOME="$HOME/Library/Android/sdk" \
-./gradlew --no-daemon :app:assembleDebug
-```
-
-APK debug:
-
-```text
-app/build/outputs/apk/debug/app-debug.apk
-```
-
-Para release se pueden definir las variables `SIGNING_STORE_FILE`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS` y `SIGNING_KEY_PASSWORD`. No guardes valores reales en el repo; usa secretos del entorno o de GitHub Actions.
-
 ## Releases
 
 GitHub Actions permite publicar el canal estable o beta desde `Build signed APK`.
 
 - `stable`: usa un `versionName` sin sufijos de prerelease, crea o actualiza un GitHub Release normal y mantiene el APK `StreamVault-Adaptive-Bridge.apk`.
 - `beta`: requiere un `versionName` con sufijo `-beta`, por ejemplo `1.1.20-beta.1`, crea o actualiza un GitHub prerelease y publica el alias `StreamVault-Adaptive-Bridge-beta.apk` sin marcarlo como latest.
-
-## Instalacion
-
-```sh
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-Despues, abrir StreamVault > Plugins > Refresh, activar `StreamVault Adaptive Bridge`, abrir su configuracion, anadir una lista propia por URL, fichero, ruta local o URI `content://`, guardar y sincronizar/activar de nuevo el proveedor si ya existia una importacion anterior. Esto actualiza las URLs locales al puerto actual del plugin.
-
-## Validacion
-
-- Build debug del plugin completado correctamente.
-- Instalacion en Nexus 5X verificada.
-- Descubrimiento del servicio `com.streamvault.plugin.API` verificado desde StreamVault.
-- Activacion del plugin en StreamVault verificada.
-- Importacion de listas M3U/M3U8 proporcionadas por el usuario.
-- `playback.prepare` verificado con URL final, `streamType`, cabeceras, User-Agent y DRM.
-- Licencia ClearKey local verificada via JWK en `/license/clearkey/{channelId}`.
-- DASH ClearKey verificado con `DashMediaSource`.
-- SmoothStreaming/ISML ClearKey verificado con `SsMediaSource`.
-- Lista propia de 182 canales MPD verificada a nivel de importacion, preparacion, proxy de manifest y respuesta local del servicio.
-- Preview y reproduccion fullscreen de un canal 4K con segmentos DASH relativos verificados en Nexus 5X tras resolverlos contra la URL final del manifest.
-- Canales HDR/HEVC verificados a nivel de manifest y fragmentos: el plugin evita reenviar cabeceras que el CDN acepta en el manifest pero rechaza en segmentos.
-- Chromecast verificado con canal HDR/HEVC: `first-frame-success`, decoder hardware `video/hevc`, estado `PLAYING`, MPD local `200` y fragmentos DASH `200` durante reproduccion continua.
-- El proxy absorbe fallos transitorios de manifests y fragmentos live con cache corta de MPD y reintentos internos, evitando que Media3 vea `403/502` puntuales del CDN.
-
-Nota: Nexus 5X puede seguir rechazando o degradando canales HDR/HEVC Main10 por soporte de decoder del dispositivo. En esos casos el plugin entrega manifest, licencia y segmentos correctamente, pero la reproduccion depende de que Android/Media3 tenga un decoder compatible. En dispositivos sin soporte suficiente, los fragmentos pueden llegar con `200` y aun asi fallar por `video/hevc hvc1.2.4` HLG 10-bit y `NO_EXCEEDS_CAPABILITIES`.
-
-## Cambios Necesarios En StreamVault Host
-
-La API original solo permitia que `playback.prepare` indicase exito/error. Para que este plugin pueda reproducir contenido adaptativo protegido, StreamVault host se extendio para aceptar en la respuesta:
-
-- `output_url`
-- `stream_type`
-- `headers_json`
-- `user_agent`
-- `drm_json`
-
-Tambien se actualizo la vista previa de TV en vivo para llamar a `preparePlaybackStreamInfo`, no solo el reproductor fullscreen.
-
-Para ISML + ClearKey, StreamVault host usa un parser SmoothStreaming especifico que reconstruye el `DrmInitData` con PSSH v1 y los KID extraidos del `ProtectionHeader`. Sin ese ajuste, Android ClearKey rechaza la sesion antes de pedir la licencia.
