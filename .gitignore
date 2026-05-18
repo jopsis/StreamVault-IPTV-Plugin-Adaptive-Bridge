@@ -1,0 +1,17 @@
+.gradle/
+.DS_Store
+build/
+local.properties
+*.iml
+app/build/
+captures/
+.idea/
+/app/.cxx
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+/graphify-out
+/.codex
+/.claude

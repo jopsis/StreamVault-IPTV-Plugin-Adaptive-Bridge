@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">InputStream Adaptive</string>
+    <string name="plugin_description">Kodi inputstream.adaptive-style M3U/KODIPROP companion plugin for StreamVault.</string>
+    <string name="provider_name">InputStream Adaptive</string>
+    <string name="status_ready">Ready</string>
+    <string name="status_disabled">Disabled</string>
+    <string name="status_error">Error</string>
+    <string name="message_enabled">InputStream Adaptive is ready.</string>
+    <string name="message_disabled">InputStream Adaptive stopped.</string>
+    <string name="message_provider_ready">Provider playlist is ready.</string>
+    <string name="message_provider_empty">No adaptive channels were found.</string>
+    <string name="message_playback_ready">Adaptive playback metadata prepared.</string>
+    <string name="message_playback_not_found">Adaptive channel was not found. Refresh the provider.</string>
+    <string name="message_unsupported_plugin_request">Unsupported plugin request.</string>
+    <string name="message_settings_saved">Settings saved.</string>
+    <string name="message_refresh_ok">Sources refreshed.</string>
+    <string name="message_unknown_action">Unknown action.</string>
+    <string name="config_subtitle">Kodi inputstream.adaptive style lists for DASH, HLS and SmoothStreaming.</string>
+    <string name="label_provider">Provider</string>
+    <string name="label_channel_count">%1$d channels</string>
+    <string name="section_sources">M3U sources</string>
+    <string name="label_source_name">Name</string>
+    <string name="label_source_url">URL, file or content URI</string>
+    <string name="label_source_fallback">Source %1$d</string>
+    <string name="button_save">Save</string>
+    <string name="button_refresh">Refresh</string>
+    <string name="button_copy">Copy</string>
+    <string name="button_add_source">Add source</string>
+    <string name="button_update_source">Update source</string>
+    <string name="button_pick_file">Choose file</string>
+    <string name="button_cancel">Cancel</string>
+    <string name="button_edit">Edit</string>
+    <string name="button_remove">Remove</string>
+    <string name="message_no_sources">No M3U sources added yet.</string>
+    <string name="message_source_url_required">Source URL is required.</string>
+    <string name="message_source_duplicate">That source is already in the list.</string>
+    <string name="message_source_added">Source added.</string>
+    <string name="message_source_updated">Source updated.</string>
+    <string name="message_source_removed">Source removed.</string>
+    <string name="message_copied">Copied to clipboard.</string>
+    <string name="message_working">Working...</string>
+</resources>

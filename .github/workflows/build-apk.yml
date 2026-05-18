@@ -1,0 +1,231 @@
+name: Build signed APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_channel:
+        description: Release channel to publish
+        required: true
+        default: stable
+        type: choice
+        options:
+          - stable
+          - beta
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Build signed release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Install Android SDK packages
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platforms;android-36" \
+            "build-tools;36.1.0"
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Read APK version
+        id: version
+        run: |
+          VERSION_NAME="$(./gradlew -q :app:printVersionName)"
+          VERSION_CODE="$(./gradlew -q :app:printVersionCode)"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve release tag and channel
+        id: release
+        run: |
+          VERSION_NAME="${{ steps.version.outputs.version_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RELEASE_TAG="$VERSION_NAME"
+            RELEASE_CHANNEL="${{ github.event.inputs.release_channel }}"
+          else
+            RELEASE_TAG="$GITHUB_REF_NAME"
+            TAG_VERSION="${RELEASE_TAG#v}"
+            if [[ "$TAG_VERSION" == *-beta* ]]; then
+              RELEASE_CHANNEL="beta"
+            else
+              RELEASE_CHANNEL="stable"
+            fi
+          fi
+
+          if [ "$RELEASE_CHANNEL" != "stable" ] && [ "$RELEASE_CHANNEL" != "beta" ]; then
+            echo "::error::Unsupported release channel '$RELEASE_CHANNEL'."
+            exit 1
+          fi
+
+          PRERELEASE=false
+          MAKE_LATEST=true
+          APK_ALIAS="StreamVault-InputStream-Adaptive-Plugin.apk"
+          if [ "$RELEASE_CHANNEL" = "beta" ]; then
+            PRERELEASE=true
+            MAKE_LATEST=false
+            APK_ALIAS="StreamVault-InputStream-Adaptive-Plugin-beta.apk"
+          fi
+
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "channel=$RELEASE_CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "make_latest=$MAKE_LATEST" >> "$GITHUB_OUTPUT"
+          echo "apk_alias=$APK_ALIAS" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release tag and channel
+        run: |
+          TAG_VERSION="${{ steps.release.outputs.tag }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          VERSION_NAME="${{ steps.version.outputs.version_name }}"
+          RELEASE_CHANNEL="${{ steps.release.outputs.channel }}"
+
+          if [ "$TAG_VERSION" != "$VERSION_NAME" ]; then
+            echo "::error::Release tag '${{ steps.release.outputs.tag }}' must match app versionName '${{ steps.version.outputs.version_name }}' (optional 'v' prefix is accepted)."
+            exit 1
+          fi
+
+          case "$VERSION_NAME" in
+            *[[:space:]]*)
+              echo "::error::versionName '$VERSION_NAME' must not contain whitespace."
+              exit 1
+              ;;
+          esac
+
+          if [ "$RELEASE_CHANNEL" = "beta" ]; then
+            case "$VERSION_NAME" in
+              *-beta*) ;;
+              *)
+                echo "::error::Beta releases must use a beta versionName, for example '1.1.19-beta.1'."
+                exit 1
+                ;;
+            esac
+          else
+            case "$VERSION_NAME" in
+              *-alpha*|*-beta*|*-rc*)
+                echo "::error::Stable releases must not use prerelease versionName suffixes."
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Create version tag for manual release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          RELEASE_TAG="${{ steps.release.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+            TAG_COMMIT="$(git rev-list -n 1 "$RELEASE_TAG")"
+            HEAD_COMMIT="$(git rev-parse HEAD)"
+            if [ "$TAG_COMMIT" != "$HEAD_COMMIT" ]; then
+              echo "::error::Tag '$RELEASE_TAG' already exists on another commit. Bump versionName before creating a new release."
+              exit 1
+            fi
+            echo "Tag '$RELEASE_TAG' already exists on this commit."
+          else
+            git tag "$RELEASE_TAG"
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+
+      - name: Validate signing secrets
+        env:
+          ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
+          ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
+          ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
+          ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for secret_name in \
+            ANDROID_SIGNING_KEYSTORE_BASE64 \
+            ANDROID_SIGNING_STORE_PASSWORD \
+            ANDROID_SIGNING_KEY_ALIAS \
+            ANDROID_SIGNING_KEY_PASSWORD
+          do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error::Missing secret $secret_name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Decode release keystore
+        env:
+          ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keystore"
+          printf '%s' "$ANDROID_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/keystore/release.jks"
+
+      - name: Build signed release APK
+        env:
+          SIGNING_STORE_FILE: ${{ runner.temp }}/keystore/release.jks
+          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - name: Prepare APK artifact
+        id: artifact
+        run: |
+          mkdir -p dist
+          VERSIONED_APK_FILE="dist/StreamVault-InputStream-Adaptive-Plugin-${{ steps.version.outputs.version_name }}.apk"
+          CHANNEL_APK_FILE="dist/${{ steps.release.outputs.apk_alias }}"
+          cp app/build/outputs/apk/release/app-release.apk "$VERSIONED_APK_FILE"
+          cp app/build/outputs/apk/release/app-release.apk "$CHANNEL_APK_FILE"
+          echo "versioned_apk_file=$VERSIONED_APK_FILE" >> "$GITHUB_OUTPUT"
+          echo "channel_apk_file=$CHANNEL_APK_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreamVault-InputStream-Adaptive-Plugin-${{ steps.version.outputs.version_name }}
+          path: dist/*.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_CHANNEL: ${{ steps.release.outputs.channel }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          MAKE_LATEST: ${{ steps.release.outputs.make_latest }}
+          VERSIONED_APK_FILE: ${{ steps.artifact.outputs.versioned_apk_file }}
+          CHANNEL_APK_FILE: ${{ steps.artifact.outputs.channel_apk_file }}
+        run: |
+          NOTES="Signed $RELEASE_CHANNEL APK for version ${{ steps.version.outputs.version_name }} (versionCode ${{ steps.version.outputs.version_code }})."
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            RELEASE_ID="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)"
+          else
+            RELEASE_ID="$(gh api --method POST "repos/$GITHUB_REPOSITORY/releases" \
+              -f tag_name="$RELEASE_TAG" \
+              -f name="$RELEASE_TAG" \
+              -f body="$NOTES" \
+              -F prerelease="$PRERELEASE" \
+              -f make_latest="$MAKE_LATEST" \
+              --jq .id)"
+          fi
+
+          gh release upload "$RELEASE_TAG" "$VERSIONED_APK_FILE" "$CHANNEL_APK_FILE" --clobber
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -f name="$RELEASE_TAG" \
+            -f body="$NOTES" \
+            -F prerelease="$PRERELEASE" \
+            -f make_latest="$MAKE_LATEST" >/dev/null

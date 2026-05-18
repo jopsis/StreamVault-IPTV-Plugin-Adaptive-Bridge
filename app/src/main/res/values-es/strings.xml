@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">InputStream Adaptive</string>
+    <string name="plugin_description">Plugin companion para listas M3U/KODIPROP estilo Kodi inputstream.adaptive en StreamVault.</string>
+    <string name="provider_name">InputStream Adaptive</string>
+    <string name="status_ready">Listo</string>
+    <string name="status_disabled">Desactivado</string>
+    <string name="status_error">Error</string>
+    <string name="message_enabled">InputStream Adaptive está listo.</string>
+    <string name="message_disabled">InputStream Adaptive detenido.</string>
+    <string name="message_provider_ready">La lista del proveedor está lista.</string>
+    <string name="message_provider_empty">No se encontraron canales adaptativos.</string>
+    <string name="message_playback_ready">Metadatos de reproducción adaptativa preparados.</string>
+    <string name="message_playback_not_found">No se encontró el canal adaptativo. Actualiza el proveedor.</string>
+    <string name="message_unsupported_plugin_request">Solicitud de plugin no soportada.</string>
+    <string name="message_settings_saved">Ajustes guardados.</string>
+    <string name="message_refresh_ok">Fuentes actualizadas.</string>
+    <string name="message_unknown_action">Acción desconocida.</string>
+    <string name="config_subtitle">Listas estilo Kodi inputstream.adaptive para DASH, HLS y SmoothStreaming.</string>
+    <string name="label_provider">Proveedor</string>
+    <string name="label_channel_count">%1$d canales</string>
+    <string name="section_sources">Fuentes M3U</string>
+    <string name="label_source_name">Nombre</string>
+    <string name="label_source_url">URL, fichero o content URI</string>
+    <string name="label_source_fallback">Fuente %1$d</string>
+    <string name="button_save">Guardar</string>
+    <string name="button_refresh">Actualizar</string>
+    <string name="button_copy">Copiar</string>
+    <string name="button_add_source">Añadir fuente</string>
+    <string name="button_update_source">Actualizar fuente</string>
+    <string name="button_pick_file">Elegir fichero</string>
+    <string name="button_cancel">Cancelar</string>
+    <string name="button_edit">Editar</string>
+    <string name="button_remove">Quitar</string>
+    <string name="message_no_sources">Aún no hay fuentes M3U añadidas.</string>
+    <string name="message_source_url_required">La URL de la fuente es obligatoria.</string>
+    <string name="message_source_duplicate">Esa fuente ya está en la lista.</string>
+    <string name="message_source_added">Fuente añadida.</string>
+    <string name="message_source_updated">Fuente actualizada.</string>
+    <string name="message_source_removed">Fuente eliminada.</string>
+    <string name="message_copied">Copiado al portapapeles.</string>
+    <string name="message_working">Trabajando...</string>
+</resources>
