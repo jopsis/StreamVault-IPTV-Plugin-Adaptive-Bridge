@@ -64,5 +64,5 @@ Nexus 5X may not decode some HDR/HEVC Main10 streams even when the plugin correc
 ## Release Hygiene
 
 - Keep `AdaptiveBridge.VERSION_NAME`, `AdaptiveBridge.VERSION_CODE`, `app/build.gradle.kts`, and `AndroidManifest.xml` metadata in sync.
-- Update both `docs/Changelog.md` and `docs/Chagelog.md` when changing behavior. The typo file is intentionally preserved for compatibility with earlier user requests.
+- Update `docs/Changelog.md` when changing behavior.
 - After code changes, run `graphify update .` and then run the Gradle build command above.

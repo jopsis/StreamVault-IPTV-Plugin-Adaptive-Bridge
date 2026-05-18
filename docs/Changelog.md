@@ -1,268 +1,273 @@
 # Changelog
 
+## Unreleased - 2026-05-18
+
+### Changed
+
+- Rewrote the public README and changelog in English for a broader audience.
+- Removed the duplicate misspelled `docs/Chagelog.md` file.
+- Updated repository guidance to use only the canonical `docs/Changelog.md`.
+
 ## 1.1.20-beta.1 - 2026-05-18
 
 ### Changed
 
-- Proyecto renombrado a StreamVault Adaptive Bridge.
-- Package Android cambiado a `com.streamvault.plugin.adaptivebridge` y plugin ID cambiado a `com.streamvault.plugins.adaptivebridge`.
-- Activity de configuracion renombrada a `AdaptiveBridgeConfigActivity` y servicio IPC a `StreamVaultAdaptiveBridgePluginService`.
-- GitHub Actions ahora permite publicar releases firmadas en canal `stable` o `beta` desde `workflow_dispatch`.
-- Los tags/versionName con sufijo `-beta` se publican como GitHub prerelease, no se marcan como latest y generan el alias `StreamVault-Adaptive-Bridge-beta.apk`.
-- Versión beta del plugin actualizada a `1.1.20-beta.1` (`versionCode` 23).
+- Renamed the project to StreamVault Adaptive Bridge.
+- Changed the Android package to `com.streamvault.plugin.adaptivebridge` and the plugin ID to `com.streamvault.plugins.adaptivebridge`.
+- Renamed the configuration activity to `AdaptiveBridgeConfigActivity` and the IPC service to `StreamVaultAdaptiveBridgePluginService`.
+- Updated GitHub Actions so signed releases can be published to the `stable` or `beta` channel from `workflow_dispatch`.
+- Published `versionName` values with a `-beta` suffix as GitHub prereleases, kept them out of the latest release slot, and generated the `StreamVault-Adaptive-Bridge-beta.apk` alias.
+- Updated the beta plugin version to `1.1.20-beta.1` (`versionCode` 23).
 
 ### Validation
 
-- `graphify update .` completado tras el rename.
-- Build debug completado correctamente y version confirmada como `1.1.20-beta.1` (`versionCode` 23).
-- APK instalado en Chromecast y verificado con package `com.streamvault.plugin.adaptivebridge`.
-- Activity `AdaptiveBridgeConfigActivity` abierta en Chromecast y servicio `StreamVaultAdaptiveBridgePluginService` verificado para discovery `com.streamvault.plugin.API`.
+- Completed `graphify update .` after the rename.
+- Completed the debug build and confirmed version `1.1.20-beta.1` (`versionCode` 23).
+- Installed the APK on a Chromecast test device and verified package `com.streamvault.plugin.adaptivebridge`.
+- Opened `AdaptiveBridgeConfigActivity` on the test device and verified `StreamVaultAdaptiveBridgePluginService` discovery through `com.streamvault.plugin.API`.
 
 ## 1.1.18 - 2026-05-14
 
 ### Changed
 
-- Las fuentes M3U ahora se descargan en paralelo (`ExecutorService.invokeAll`), reduciendo el tiempo de refresco de catálogo de N×T a T para N fuentes.
-- `refreshCatalog` ya no bloquea lecturas de caché (`cachedChannelCount`, `cachedMessage`): el catálogo se actualiza vía `AtomicReference` y la exclusión mutua de refresco usa `ReentrantLock` propio.
-- `DocumentBuilderFactory` para análisis DASH se inicializa una sola vez como campo estático, eliminando el service-loader lookup en cada reproducción.
-- Los timeouts de las pruebas HTTP de negociación ClearKey reducidos a 3 s (connect) / 5 s (read) para agilizar el primer play de canales DASH+ClearKey.
-- El pool de threads del servidor HTTP local cambiado a `newFixedThreadPool(6)` (acotado) en lugar de `newCachedThreadPool`.
-- `toHex` y `stableId` en el parser M3U usan tabla de caracteres en lugar de `String.format` por byte.
-- Versión del plugin actualizada a `1.1.18` (`versionCode` 21).
+- Downloaded M3U sources in parallel with `ExecutorService.invokeAll`, reducing catalog refresh time from N x T to T for N sources.
+- Updated `refreshCatalog` so cache reads such as `cachedChannelCount` and `cachedMessage` are not blocked by refresh work; the catalog now uses `AtomicReference`, and refresh exclusion uses a dedicated `ReentrantLock`.
+- Initialized the DASH `DocumentBuilderFactory` once as a static field, avoiding service-loader lookup on each playback.
+- Reduced ClearKey negotiation HTTP test timeouts to 3 s connect / 5 s read for faster first play on DASH + ClearKey channels.
+- Changed the local HTTP server thread pool to bounded `newFixedThreadPool(6)` instead of `newCachedThreadPool`.
+- Optimized `toHex` and `stableId` in the M3U parser to use a character table instead of per-byte `String.format`.
+- Updated the plugin version to `1.1.18` (`versionCode` 21).
 
 ## 1.1.17 - 2026-05-14
 
 ### Fixed
 
-- La playlist generada anuncia ahora un `x-tvg-url` local canonico (`/epg.xml`) para que StreamVault sincronice el EPG contra el propio plugin.
-- El servidor local expone `/epg.xml`, redirige al primer XMLTV declarado por las fuentes M3U y devuelve un XMLTV vacio valido si no hay EPG disponible.
-- Version del plugin actualizada a `1.1.17` (`versionCode` 20).
+- Generated playlists now advertise a canonical local `x-tvg-url` (`/epg.xml`) so StreamVault syncs EPG data through the plugin itself.
+- The local server now exposes `/epg.xml`, redirects to the first XMLTV URL declared by the M3U sources, and returns a valid empty XMLTV document when no EPG is available.
+- Updated the plugin version to `1.1.17` (`versionCode` 20).
 
 ### Validation
 
-- Build debug del plugin completado correctamente.
-- APK `1.1.17` (`versionCode` 20) instalado en Chromecast.
-- `/playlist.m3u` anuncia `#EXTM3U x-tvg-url="http://127.0.0.1:39078/epg.xml"`.
-- `/epg.xml` responde con `302` hacia el primer XMLTV declarado por la lista y siguiendo la redireccion devuelve XMLTV valido.
-- StreamVault beta en Chromecast detecta el plugin `1.1.17`, permite activarlo y sincroniza el proveedor con 182 canales.
+- Completed the debug build.
+- Installed APK `1.1.17` (`versionCode` 20) on a Chromecast test device.
+- Verified that `/playlist.m3u` advertises `#EXTM3U x-tvg-url="http://127.0.0.1:39078/epg.xml"`.
+- Verified that `/epg.xml` responds with `302` to the first declared XMLTV source and returns valid XMLTV when following the redirect.
+- Verified StreamVault plugin detection, activation, and provider sync with a user-supplied playlist.
 
 ## 1.1.16 - 2026-05-13
 
 ### Fixed
 
-- Reemite las URLs EPG embebidas de `#EXTM3U` usando solo el atributo canonico `x-tvg-url` en `/playlist.m3u`, manteniendo la lectura de alias como `url-tvg`, `tvg-url` y `url-xml`.
-- Version del plugin actualizada a `1.1.16` (`versionCode` 19).
+- Re-emitted embedded EPG URLs from `#EXTM3U` using only the canonical `x-tvg-url` attribute in `/playlist.m3u`, while still reading aliases such as `url-tvg`, `tvg-url`, and `url-xml`.
+- Updated the plugin version to `1.1.16` (`versionCode` 19).
 
 ### Validation
 
-- Build debug del plugin completado correctamente.
-- APK `1.1.16` (`versionCode` 19) instalado en Chromecast y validado contra `/playlist.m3u`; el header se sirve como `#EXTM3U x-tvg-url="..."`.
-- StreamVault host `1.0.11` en Chromecast descarga la playlist pero sigue dejando `epg_url` vacio en el proveedor; queda identificado como seguimiento del host.
+- Completed the debug build.
+- Installed APK `1.1.16` (`versionCode` 19) on a Chromecast test device and validated `/playlist.m3u`; the header is served as `#EXTM3U x-tvg-url="..."`.
+- Confirmed that the matching StreamVault host downloaded the playlist; host-side EPG persistence remained a separate follow-up.
 
 ## 1.1.15 - 2026-05-13
 
 ### Fixed
 
-- Conserva las URLs EPG declaradas en la cabecera M3U (`x-tvg-url`, `url-tvg`, `tvg-url` o `url-xml`) y las reemite en `/playlist.m3u` para que StreamVault pueda marcarlas en el proveedor.
-- Deduplica las URLs EPG al combinar varias fuentes y muestra el recuento en el estado del catalogo sin exponer las URLs.
-- Version del plugin actualizada a `1.1.15` (`versionCode` 18).
+- Preserved EPG URLs declared in the M3U header (`x-tvg-url`, `url-tvg`, `tvg-url`, or `url-xml`) and re-emitted them in `/playlist.m3u` so StreamVault can attach them to the provider.
+- Deduplicated EPG URLs when combining multiple sources and showed only the count in catalog status, without exposing the URLs.
+- Updated the plugin version to `1.1.15` (`versionCode` 18).
 
 ### Validation
 
-- Build debug del plugin completado correctamente.
+- Completed the debug build.
 
 ## 1.1.14 - 2026-05-13
 
 ### Changed
 
-- Eliminada la configuracion de M3U inline: el plugin ahora acepta solo fuentes M3U por URL, fichero, ruta local o URI `content://`.
-- El schema de configuracion ya no expone `inline_m3u` y el catalogo ya no intenta parsear contenido pegado.
-- `GET_PROVIDER_URL` solo entrega la URL del proveedor cuando el plugin esta activado.
-- El badge de estado de la Activity reconoce correctamente el estado localizado `Listo`/`Ready`.
-- Eliminados los botones `Iniciar`/`Detener` de la Activity para que el alta/baja del proveedor se haga solo desde StreamVault > Plugins.
-- Version del plugin actualizada a `1.1.14` (`versionCode` 17).
+- Removed inline M3U configuration. The plugin now accepts M3U sources only by URL, file, absolute path, or `content://` URI.
+- Removed `inline_m3u` from the configuration schema and stopped trying to parse pasted playlist content in the catalog.
+- `GET_PROVIDER_URL` now returns the provider URL only while the plugin is enabled.
+- Fixed the configuration activity status badge so it recognizes localized `Ready` states.
+- Removed standalone start and stop buttons from the activity so provider creation and removal are controlled only from `StreamVault > Plugins`.
+- Updated the plugin version to `1.1.14` (`versionCode` 17).
 
 ### Validation
 
-- Build debug del plugin completado correctamente.
+- Completed the debug build.
 
 ## 1.1.13 - 2026-05-13
 
 ### Changed
 
-- Redisenada la Activity de configuracion con paneles visuales, estado en badges, URL del proveedor en fila compacta y acciones principales agrupadas.
-- Las fuentes M3U ya no se editan en una caja gigante: ahora se muestran como filas con nombre, URL compactada, editar y quitar.
-- Anade formulario compacto para nombre + URL/fichero/content URI y selector de fichero integrado.
-- El M3U inline queda en un panel independiente con altura contenida.
-- Version del plugin actualizada a `1.1.13` (`versionCode` 16).
+- Redesigned the configuration activity with visual panels, status badges, a compact provider URL row, and grouped primary actions.
+- Replaced the large M3U source text area with source rows that show name, compacted URL, edit, and remove actions.
+- Added a compact form for name plus URL/file/content URI, including an integrated file picker.
+- Moved inline M3U content into a separate constrained panel before inline support was later removed.
+- Updated the plugin version to `1.1.13` (`versionCode` 16).
 
 ### Validation
 
-- Build debug del plugin completado correctamente.
-- Instalacion debug en Chromecast verificada.
-- Activity de configuracion abierta directamente en Chromecast y revisada visualmente con la lista del usuario cargada.
+- Completed the debug build.
+- Verified debug installation on a Chromecast test device.
+- Opened the configuration activity directly on the test device and reviewed it with configured user sources.
 
 ## 1.1.12 - 2026-05-13
 
 ### Fixed
 
-- Anade cache corta de MPD por canal para evitar descargas consecutivas del mismo manifest durante la preparacion y los primeros refrescos de Media3.
-- Si el CDN falla temporalmente al refrescar el MPD, el plugin sirve el ultimo manifest valido durante una ventana corta en vez de devolver `502` al reproductor.
-- Los fragmentos DASH live servidos por proxy local reintentan internamente respuestas transitorias `403`, `404`, `408`, `425`, `429` o `5xx` antes de propagar el fallo.
-- Version del plugin actualizada a `1.1.12` (`versionCode` 15).
+- Added a short MPD cache per channel to avoid consecutive downloads of the same manifest during preparation and the first Media3 refreshes.
+- Served the latest valid manifest for a short window when the CDN temporarily fails during MPD refresh, instead of returning `502` to the player immediately.
+- Added internal retry handling for transient `403`, `404`, `408`, `425`, `429`, and `5xx` responses on proxied live DASH fragments before returning an error to the player.
+- Updated the plugin version to `1.1.12` (`versionCode` 15).
 
 ### Validation
 
-- Build debug del plugin completado correctamente.
-- Instalacion debug en Chromecast verificada.
-- Proveedor local verificado con 182 canales importados desde lista del usuario.
-- Reproduccion HDR/HEVC en Chromecast verificada con `first-frame-success`, decoder hardware `video/hevc`, estado `PLAYING`, MPD local `200` y fragmentos DASH `200`.
-- No quedan URLs, claves ni canales de prueba hardcodeados en el plugin ni en la documentacion.
+- Completed the debug build.
+- Verified debug installation on a Chromecast test device.
+- Verified local provider import using a user-supplied playlist without documenting private channel data.
+- Verified DASH playback startup on the test device with local MPD `200` responses and DASH fragment `200` responses.
+- Confirmed that no real URLs, keys, or test channels are hardcoded in the plugin or documentation.
 
 ## 1.1.10 - 2026-05-13
 
 ### Fixed
 
-- El proxy DASH sirve directamente los recursos de manifest cuando el canal esta en modo sin cabeceras, en vez de devolver `302` al CDN.
-- Los recursos DASH proxificados propagan cabeceras seguras como `Accept-Ranges`, `Content-Range`, `ETag`, `Last-Modified`, `Cache-Control` y `Expires`.
-- Si un recurso falla con `Range`, el proxy reintenta sin `Range` antes de devolver el error al reproductor.
-- Version del plugin actualizada a `1.1.10` (`versionCode` 13).
+- Served DASH manifest resources directly through the proxy when a channel is in no-header mode, instead of returning `302` to the CDN.
+- Propagated safe response headers for proxied DASH resources, including `Accept-Ranges`, `Content-Range`, `ETag`, `Last-Modified`, `Cache-Control`, and `Expires`.
+- Retried a resource request without `Range` if the ranged request fails, before returning the error to the player.
+- Updated the plugin version to `1.1.10` (`versionCode` 13).
 
 ### Validation
 
-- Manifest MPD local verificado con `200`.
-- Segmentos de inicializacion y peticiones con `Range` verificados con respuestas `200/206` desde el proxy local.
+- Verified local MPD responses with `200`.
+- Verified initialization segments and ranged requests with `200/206` responses from the local proxy.
 
 ## 1.1.8 - 2026-05-13
 
 ### Fixed
 
-- El selector de modo de cabeceras DASH comprueba tambien segmentos de inicializacion del MPD, no solo el manifest.
-- Corrige canales HDR/HEVC donde el CDN aceptaba el manifest con cabeceras de la lista, pero devolvia `403` en fragmentos cuando se reenviaba `Referer`.
-- Version del plugin actualizada a `1.1.8` (`versionCode` 11).
+- Updated the DASH header-mode selector to test MPD initialization segments, not only the manifest.
+- Fixed HDR/HEVC channels where the CDN accepted playlist headers for the manifest but returned `403` for fragments when `Referer` was forwarded.
+- Updated the plugin version to `1.1.8` (`versionCode` 11).
 
 ### Validation
 
-- Manifest local de canal HDR/HEVC verificado con `200`.
-- Fragmentos de inicializacion de audio/video HDR/HEVC verificados sin `403` al activar el modo sin cabeceras.
-- Logcat previo confirmo que el fallo era `Source error / HTTP 403` en init segment, no parsing de M3U.
-- Tras el fix, el canal HDR/HEVC avanza hasta descarga de fragmentos `200`; en Nexus 5X el fallo restante es de decoder HEVC/HLG 10-bit con `NO_EXCEEDS_CAPABILITIES`.
+- Verified local manifest responses with `200`.
+- Verified audio/video initialization fragments without `403` after enabling no-header mode.
+- Confirmed that the original failure was a `Source error / HTTP 403` on an initialization segment, not M3U parsing.
+- Confirmed that HDR/HEVC Main10 playback remains dependent on the actual decoder capabilities of the device.
 
 ## 1.1.7 - 2026-05-13
 
 ### Fixed
 
-- El proxy DASH recuerda la URL final del manifest tras redirecciones y usa esa base para redirigir segmentos relativos.
-- Los segmentos DASH relativos conservan la query/token del manifest final, evitando `404` en CDNs que entregan manifests 4K/HDR desde una URL firmada distinta a la URL original de la lista.
-- Version del plugin actualizada a `1.1.7` (`versionCode` 10).
+- Remembered the final manifest URL after redirects in the DASH proxy and used that URL as the base for relative segment redirects.
+- Preserved query strings and tokens from the final manifest URL for relative DASH segments, avoiding `404` errors on CDNs that serve high-bitrate manifests from a signed redirected URL.
+- Updated the plugin version to `1.1.7` (`versionCode` 10).
 
 ### Validation
 
-- Build debug del plugin completado correctamente.
-- Instalacion debug en Nexus 5X verificada.
-- Preview y reproduccion fullscreen de un canal 4K verificados en Nexus 5X.
-- Los canales HDR/HEVC Main10 quedan condicionados al soporte real del decoder del dispositivo.
+- Completed the debug build.
+- Verified debug installation on a test device.
+- Verified preview and fullscreen playback for a high-bitrate adaptive channel from a user-provided source.
+- Confirmed that HDR/HEVC Main10 channels still depend on real device decoder support.
 
 ## 1.1.6 - 2026-05-13
 
 ### Fixed
 
-- El fallback de manifests DASH ahora reintenta sin cabeceras y sin User-Agent forzado, evitando `403` en CDNs que rechazan cabeceras heredadas de la lista.
-- El proxy cierra correctamente respuestas de prueba y cuerpos de error para evitar fugas de conexiones.
-- Las desconexiones normales del reproductor mientras cancela una carga de manifest ya no se registran como fallo del proxy.
-- Version del plugin actualizada a `1.1.6` (`versionCode` 9).
+- DASH manifest fallback now retries without headers and without a forced User-Agent, avoiding `403` responses from CDNs that reject inherited playlist headers.
+- Correctly closed probe responses and error bodies to avoid connection leaks.
+- Stopped logging normal player disconnects during canceled manifest loads as proxy failures.
+- Updated the plugin version to `1.1.6` (`versionCode` 9).
 
 ### Validation
 
-- Manifest proxy verificado en canales HDR/4K de la lista del usuario.
-- Verificada deteccion de canales HEVC/HDR con codecs `hvc1` sin exponer URLs ni claves.
+- Verified manifest proxy behavior with user-provided adaptive sources.
+- Verified HEVC/HDR codec detection without exposing URLs, keys, or channel names.
 
 ## 1.1.5 - 2026-05-13
 
 ### Fixed
 
-- Mantiene el servicio del plugin como foreground service mientras esta habilitado para que Android no lo pare por inactividad y el proxy local no desaparezca al terminar la llamada Messenger de StreamVault.
-- Cambia el puerto local preferido a `39078` para evitar colisiones con otros plugins de StreamVault que usen `39077`.
-- El proxy de manifests devuelve `502 Bad Gateway` si el origen no responde, en vez de cerrar la conexion sin cuerpo.
+- Kept the plugin service running as a foreground service while enabled, so Android does not stop it for inactivity and the local proxy stays available after the StreamVault Messenger call ends.
+- Changed the preferred local port to `39078` to avoid collisions with other StreamVault plugins that may use `39077`.
+- Returned `502 Bad Gateway` from the manifest proxy when the origin does not respond, instead of closing the connection without a response body.
 
 ### Validation
 
-- Instalacion debug en Nexus 5X.
-- Verificacion de importacion de lista propia con 182 canales MPD.
-- Verificacion de `/status.json`, `/playlist.m3u`, preparacion de reproduccion y proxy local de manifest MPD + ClearKey en el puerto nuevo.
-- Verificacion del servicio foreground en segundo plano durante mas de dos minutos sin parada por `app idle`.
+- Verified debug installation on a test device.
+- Verified import of a user-provided M3U playlist.
+- Verified `/status.json`, `/playlist.m3u`, playback preparation, and local MPD + ClearKey manifest proxy behavior on the new port.
+- Verified that the foreground service remained active in the background.
 
 ## 1.1.4 - 2026-05-13
 
 ### Changed
 
-- Anadio proxy local para manifests MPD + ClearKey.
-- Los MPD ClearKey servidos por el plugin incorporan `ContentProtection` ClearKey con PSSH v1 generado desde los KID de la lista.
-- Los segmentos DASH siguen redirigiendose al origen original, conservando cabeceras y User-Agent en la preparacion de reproduccion.
-- Version del plugin actualizada a `1.1.4` (`versionCode` 7).
+- Added a local proxy for MPD + ClearKey manifests.
+- Added ClearKey `ContentProtection` with generated PSSH v1 to MPD manifests served by the plugin.
+- Kept DASH segments on the original origin while preserving headers and User-Agent metadata during playback preparation.
+- Updated the plugin version to `1.1.4` (`versionCode` 7).
 
 ### Validation
 
-- Importacion de lista propia con 182 canales verificada.
-- Endpoints locales `/playlist.m3u`, `/play/{channelId}` y `/license/clearkey/{channelId}` verificados.
-- Manifest local `/manifest/{channelId}/manifest.mpd` verificado con `ContentProtection` ClearKey y `cenc:pssh`.
+- Verified import using a user-provided playlist.
+- Verified local `/playlist.m3u`, `/play/{channelId}`, and `/license/clearkey/{channelId}` endpoints.
+- Verified local `/manifest/{channelId}/manifest.mpd` output with ClearKey `ContentProtection` and `cenc:pssh`.
 
 ## 1.1.3 - 2026-05-13
 
 ### Changed
 
-- Eliminado todo contenido preconfigurado del plugin.
-- Reiniciada la configuracion persistida para que no se arrastren fuentes heredadas de builds anteriores.
-- Las fuentes deben ser proporcionadas por el usuario como URL remota, fichero local o M3U inline.
-- El campo de fuentes acepta `http://`, `https://`, `file://`, `content://`, rutas absolutas y el formato `Name|source`.
-- La configuracion pasa a modo nativo `activity` para permitir seleccion de fichero con el selector de documentos de Android.
-- Documentados ejemplos genericos para manifests MPD y ISML con `inputstream.adaptive`.
-- Version del plugin actualizada a `1.1.3` (`versionCode` 6).
+- Removed all preconfigured content from the plugin.
+- Reset persisted configuration so older sources from previous builds are not reused.
+- Required users to provide their own sources as remote URLs, local files, or inline M3U content. Inline support was removed later in `1.1.14`.
+- Accepted `http://`, `https://`, `file://`, `content://`, absolute paths, and the `Name|source` format in the source field.
+- Switched configuration to native activity mode so users can select files with the Android document picker.
+- Documented generic examples for MPD and ISML manifests with `inputstream.adaptive`.
+- Updated the plugin version to `1.1.3` (`versionCode` 6).
 
 ### Validation
 
-- Build debug del plugin completado correctamente.
-- Importacion de listas propias M3U/M3U8 desde URL, fichero e inline.
-- Preparacion de reproduccion adaptativa con URL final, tipo de stream, cabeceras y DRM.
+- Completed the debug build.
+- Verified import of user-owned M3U/M3U8 sources from URL, file, and inline content.
+- Verified adaptive playback preparation with final URL, stream type, headers, and DRM metadata.
 
 ## 1.1.2 - 2026-05-13
 
 ### Changed
 
-- Documentada la compatibilidad ISML + ClearKey completa.
-- StreamVault host reconstruye init data SmoothStreaming como PSSH ClearKey v1 para Android MediaDrm.
+- Documented full ISML + ClearKey compatibility.
+- StreamVault host reconstructs SmoothStreaming initialization data as ClearKey PSSH v1 for Android MediaDrm.
 
 ## 1.1.1 - 2026-05-13
 
 ### Added
 
-- Proxy local para manifests SmoothStreaming/ISML + ClearKey.
-- Redireccion de fragmentos SmoothStreaming al CDN original.
+- Added a local proxy for SmoothStreaming/ISML + ClearKey manifests.
+- Redirected SmoothStreaming fragments to the original CDN.
 
 ## 1.1.0 - 2026-05-13
 
 ### Added
 
-- Soporte de salida `SMOOTH_STREAMING` para manifests `ism`/`isml`.
-- Compatibilidad requerida en StreamVault host para reproducir SmoothStreaming mediante Media3 `SsMediaSource`.
+- Added `SMOOTH_STREAMING` output support for `ism` and `isml` manifests.
+- Added the required StreamVault host compatibility for SmoothStreaming playback through Media3 `SsMediaSource`.
 
 ## 1.0.1 - 2026-05-13
 
 ### Added
 
-- Soporte para `inputstream.adaptive.license_key` con varias claves ClearKey en formato `kid:key,kid:key`.
+- Added support for `inputstream.adaptive.license_key` with multiple ClearKey pairs in `kid:key,kid:key` format.
 
 ## 1.0.0 - 2026-05-12
 
 ### Added
 
-- Proyecto Android completo para `com.streamvault.plugin.adaptivebridge`.
-- Servicio Messenger compatible con `com.streamvault.plugin.API`.
-- Manifest de plugin con capacidades `provider.m3u`, `playback.prepare` y `configuration.schema`.
-- Servidor HTTP local en `127.0.0.1:39077`.
-- Endpoints `/playlist.m3u`, `/play/{channelId}`, `/license/clearkey/{channelId}` y `/status.json`.
-- Parser M3U/Kodi para `#KODIPROP`, `#EXTINF`, `#EXTGRP`, `#EXTVLCOPT:http-user-agent` y `#EXTVLCOPT:http-referer`.
-- Preparacion de stream adaptativo con URL final, tipo DASH/HLS, cabeceras, User-Agent y DRM.
-- Conversion ClearKey hexadecimal `kid:key` a JWK local.
-- Conversion ClearKey desde mapas JSON `{kid:key}`.
-- Configuracion host-rendered para fuentes remotas, ficheros locales y M3U inline.
+- Created the Android project for `com.streamvault.plugin.adaptivebridge`.
+- Added a Messenger service compatible with `com.streamvault.plugin.API`.
+- Added the plugin manifest with `provider.m3u`, `playback.prepare`, and `configuration.schema` capabilities.
+- Added the local HTTP server on `127.0.0.1:39077`.
+- Added `/playlist.m3u`, `/play/{channelId}`, `/license/clearkey/{channelId}`, and `/status.json` endpoints.
+- Added a Kodi-compatible M3U parser for `#KODIPROP`, `#EXTINF`, `#EXTGRP`, `#EXTVLCOPT:http-user-agent`, and `#EXTVLCOPT:http-referer`.
+- Added adaptive stream preparation with final URL, DASH/HLS type, headers, User-Agent, and DRM metadata.
