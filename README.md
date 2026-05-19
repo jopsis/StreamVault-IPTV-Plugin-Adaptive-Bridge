@@ -13,7 +13,7 @@ StreamVault Adaptive Bridge is a companion plugin for StreamVault IPTV. It impor
 
 The plugin does not include channels, playlists, keys, tokens, or preconfigured content. Users must provide their own authorized sources by remote URL, local file, absolute path, or Android `content://` URI.
 
-Current plugin version: `1.1.20-beta.1` (`versionCode` 23).
+Current plugin version: `1.1.20-beta.2` (`versionCode` 24).
 
 ## Features
 
@@ -23,7 +23,7 @@ Current plugin version: `1.1.20-beta.1` (`versionCode` 23).
 - M3U/M3U8 sources from `http://`, `https://`, `file://`, `content://`, or absolute local paths.
 - Parser support for `#EXTM3U`, `#EXTINF`, `#EXTGRP`, `#EXTVLCOPT:http-user-agent`, `#EXTVLCOPT:http-referer`, and `#KODIPROP`.
 - Kodi `inputstream.adaptive` metadata for DASH, HLS, SmoothStreaming, manifest headers, stream headers, license headers, and DRM.
-- ClearKey `kid:key` values in hexadecimal converted into a local JWK response at `/license/clearkey/{channelId}`, including comma-separated key lists and JSON maps.
+- ClearKey `kid:key` values in hexadecimal, base64, or JWK/base64url form converted into a local JWK response at `/license/clearkey/{channelId}`, including comma-separated key lists, JSON maps, and Kodi `drm_legacy` data URI entries.
 - Local DASH/MPD ClearKey manifest proxy at `/manifest/{channelId}/manifest.mpd`, including generated ClearKey `ContentProtection` with PSSH v1 while keeping media segments on the original CDN.
 - Header fallback for strict CDNs: if DASH manifests or initialization segments return `403` with playlist headers, the plugin retries without forced headers or User-Agent.
 - Local SmoothStreaming/ISML ClearKey manifest proxy at `/manifest/{channelId}/Manifest`, with ClearKey-compatible protection metadata for StreamVault host playback.
@@ -77,6 +77,7 @@ During normal app startup, StreamVault runs its own provider checks and schedule
 - `inputstream.adaptive.stream_headers`
 - `inputstream.adaptive.common_headers`
 - `inputstream.adaptive.license_headers`
+- `inputstream.adaptive.drm_legacy`
 - Partial `inputstream.adaptive.drm` support for `org.w3.clearkey`, `com.widevine.alpha`, and `com.microsoft.playready`
 
 ## DASH ClearKey Example
@@ -102,6 +103,18 @@ JSON key maps are also accepted:
 #KODIPROP:inputstream.adaptive.license_type=org.w3.clearkey
 #KODIPROP:inputstream.adaptive.license_key={"00112233445566778899aabbccddeeff":"ffeeddccbbaa99887766554433221100","11223344556677889900aabbccddeeff":"00ffeeddccbbaa998877665544332211"}
 https://media.example.com/live/example-json/manifest.mpd
+```
+
+JWK/base64url ClearKey entries are normalized to the same local Android ClearKey response:
+
+```m3u
+#EXTM3U
+#EXTINF:-1 tvg-id="dash.jwk.example" group-title="DASH",Example DASH JWK Channel
+#KODIPROP:inputstream=inputstream.adaptive
+#KODIPROP:inputstream.adaptive.manifest_type=mpd
+#KODIPROP:inputstream.adaptive.license_type=org.w3.clearkey
+#KODIPROP:inputstream.adaptive.license_key={"keys":[{"kty":"oct","kid":"AAECAwQFBgcICQoLDA0ODw","k":"ABEiM0RVZneImaq7zN3u_w"}],"type":"temporary"}
+https://media.example.com/live/example-jwk/manifest.mpd
 ```
 
 For MPD + ClearKey, some manifests declare `ContentProtection` only for other DRM systems even though the playlist provides ClearKey values. In that case, the plugin serves the MPD through the local proxy and adds Android Media3-compatible ClearKey metadata.
@@ -150,7 +163,7 @@ Some older devices may not decode HDR/HEVC Main10 streams even when the plugin c
 GitHub Actions can publish signed builds from the `Build signed APK` workflow.
 
 - `stable`: requires a `versionName` without prerelease suffixes, creates or updates a normal GitHub Release, and keeps the APK alias `StreamVault-Adaptive-Bridge.apk`.
-- `beta`: requires a `versionName` with a `-beta` suffix, for example `1.1.20-beta.1`, creates or updates a GitHub prerelease, and publishes the APK alias `StreamVault-Adaptive-Bridge-beta.apk` without marking it as latest.
+- `beta`: requires a `versionName` with a `-beta` suffix, for example `1.1.20-beta.2`, creates or updates a GitHub prerelease, and publishes the APK alias `StreamVault-Adaptive-Bridge-beta.apk` without marking it as latest.
 
 ## Privacy And Content Policy
 

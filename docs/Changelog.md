@@ -1,14 +1,21 @@
 # Changelog
 
-## Unreleased - 2026-05-18
+## 1.1.20-beta.2 - 2026-05-19
 
 ### Changed
 
+- Accepted ClearKey KID/key values in base64/base64url and Kodi JWK/data URI forms, normalizing them to the same local Android ClearKey response as hexadecimal keys.
+- Added support for Kodi `inputstream.adaptive.drm_legacy` ClearKey entries, including `kid:key` pairs and `data:application/json;base64,...` license data.
 - Matched Kodi `inputstream.adaptive` header scoping more closely: `common_headers` apply everywhere, `manifest_headers` are used for manifest downloads, and `stream_headers` are used for media resources.
 - Proxied DASH ClearKey media resources when stream-scoped headers are present, so playback no longer depends on the host player preserving those headers across local manifest redirects.
 - Rewrote the public README and changelog in English for a broader audience.
 - Removed the duplicate misspelled `docs/Chagelog.md` file.
 - Updated repository guidance to use only the canonical `docs/Changelog.md`.
+- Updated the beta plugin version to `1.1.20-beta.2` (`versionCode` 24).
+
+### Validation
+
+- Completed the debug build and confirmed version `1.1.20-beta.2` (`versionCode` 24).
 
 ## 1.1.20-beta.1 - 2026-05-18
 

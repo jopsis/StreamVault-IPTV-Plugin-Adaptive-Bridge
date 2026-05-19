@@ -33,8 +33,8 @@ android {
         applicationId = "com.streamvault.plugin.adaptivebridge"
         minSdk = 27
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.1.20-beta.1"
+        versionCode = 24
+        versionName = "1.1.20-beta.2"
     }
 
     compileOptions {

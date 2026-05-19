@@ -35,8 +35,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     private static final AtomicReference<AdaptiveBridge> INSTANCE = new AtomicReference<>();
-    private static final String VERSION_NAME = "1.1.20-beta.1";
-    private static final int VERSION_CODE = 23;
+    private static final String VERSION_NAME = "1.1.20-beta.2";
+    private static final int VERSION_CODE = 24;
     private static final String DEFAULT_USER_AGENT = "StreamVault-AdaptiveBridge/" + VERSION_NAME;
     private static final long MANIFEST_FRESH_CACHE_MS = 3_000L;
     private static final long MANIFEST_STALE_FALLBACK_MS = 30_000L;
