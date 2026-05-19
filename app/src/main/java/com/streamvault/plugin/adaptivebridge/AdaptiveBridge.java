@@ -377,10 +377,10 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     @Override
     public AdaptiveLocalServer.ProxiedResource manifestResource(String id, String suffix, Map<String, String> requestHeaders) throws Exception {
         AdaptiveChannel channel = channel(id);
-        if (channel == null || !usesNoHeaderDashMode(channel)) return null;
+        if (channel == null || (!usesNoHeaderDashMode(channel) && !channel.hasStreamRequestHeaders())) return null;
         String location = manifestResourceLocation(id, suffix);
         if (location == null || location.trim().isEmpty()) return null;
-        return openManifestResource(location, requestHeaders);
+        return openManifestResource(channel, location, requestHeaders);
     }
 
     @Override
@@ -460,22 +460,22 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
 
     Map<String, String> playbackHeaders(AdaptiveChannel channel) {
         if (usesNoHeaderDashMode(channel)) return java.util.Collections.emptyMap();
-        return channel.headers;
+        return channel.streamHeaders;
     }
 
     String playbackUserAgent(AdaptiveChannel channel) {
         if (usesNoHeaderDashMode(channel)) return "";
-        return channel.userAgent;
+        return channel.streamUserAgent;
     }
 
     private Map<String, String> manifestHeaders(AdaptiveChannel channel) {
         if (usesNoHeaderDashMode(channel)) return java.util.Collections.emptyMap();
-        return channel.headers;
+        return channel.manifestHeaders;
     }
 
     private String manifestUserAgent(AdaptiveChannel channel) {
         if (usesNoHeaderDashMode(channel)) return "";
-        return channel.userAgent;
+        return channel.manifestUserAgent;
     }
 
     private boolean usesNoHeaderDashMode(AdaptiveChannel channel) {
@@ -493,8 +493,8 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
             try {
                 DownloadResult result = downloadTextResult(
                         channel.manifestUrl,
-                        noHeaderMode ? java.util.Collections.emptyMap() : channel.headers,
-                        noHeaderMode ? "" : channel.userAgent
+                        noHeaderMode ? java.util.Collections.emptyMap() : channel.manifestHeaders,
+                        noHeaderMode ? "" : channel.manifestUserAgent
                 );
                 dashClearKeyNoHeaderMode.put(channel.id, noHeaderMode);
                 return result;
@@ -526,7 +526,7 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     private void resolveDashClearKeyHeaderMode(AdaptiveChannel channel) {
         if (channel == null || !channel.needsDashClearKeyManifestProxy()) return;
         if (dashClearKeyNoHeaderMode.containsKey(channel.id)) return;
-        if (httpStatus(channel.manifestUrl, channel.headers, channel.userAgent) < 400) {
+        if (httpStatus(channel.manifestUrl, channel.manifestHeaders, channel.manifestUserAgent) < 400) {
             dashClearKeyNoHeaderMode.put(channel.id, dashResourcesPreferNoHeaderMode(channel));
             return;
         }
@@ -536,7 +536,7 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
 
     private boolean dashResourcesPreferNoHeaderMode(AdaptiveChannel channel) {
         try {
-            DownloadResult manifest = downloadTextResult(channel.manifestUrl, channel.headers, channel.userAgent);
+            DownloadResult manifest = downloadTextResult(channel.manifestUrl, channel.manifestHeaders, channel.manifestUserAgent);
             return dashResourcesPreferNoHeaderMode(channel, manifest.text, manifest.finalUrl);
         } catch (Exception ignored) {
         }
@@ -550,7 +550,7 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
             );
             for (String resource : dashInitializationResources(manifest, 10)) {
                 String resourceUrl = resourceBase.resourceLocation(resource);
-                int withHeaders = httpStatus(resourceUrl, channel.headers, channel.userAgent);
+                int withHeaders = httpStatus(resourceUrl, channel.streamHeaders, channel.streamUserAgent);
                 if (withHeaders < 400) continue;
                 int withoutHeaders = httpStatus(resourceUrl, java.util.Collections.emptyMap(), "");
                 if (withoutHeaders < 400) return true;
@@ -630,14 +630,20 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
         }
     }
 
-    private AdaptiveLocalServer.ProxiedResource openManifestResource(String url, Map<String, String> requestHeaders) throws Exception {
+    private AdaptiveLocalServer.ProxiedResource openManifestResource(AdaptiveChannel channel, String url, Map<String, String> requestHeaders) throws Exception {
         Map<String, String> upstreamHeaders = proxyRequestHeaders(requestHeaders);
-        HttpURLConnection connection = openManifestResourceConnection(url, upstreamHeaders);
+        if (!usesNoHeaderDashMode(channel)) {
+            Map<String, String> streamHeaders = new java.util.LinkedHashMap<>(channel.streamHeaders);
+            streamHeaders.putAll(upstreamHeaders);
+            upstreamHeaders = streamHeaders;
+        }
+        String upstreamUserAgent = usesNoHeaderDashMode(channel) ? "" : channel.streamUserAgent;
+        HttpURLConnection connection = openManifestResourceConnection(url, upstreamHeaders, upstreamUserAgent);
         int code = connection.getResponseCode();
         if (code >= 400 && !upstreamHeaders.isEmpty()) {
             closeQuietly(connection.getErrorStream());
             connection.disconnect();
-            connection = openManifestResourceConnection(url, java.util.Collections.emptyMap());
+            connection = openManifestResourceConnection(url, java.util.Collections.emptyMap(), "");
             code = connection.getResponseCode();
         }
         long[] retryDelays = new long[]{250L, 750L};
@@ -646,7 +652,7 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
             closeQuietly(connection.getErrorStream());
             connection.disconnect();
             Thread.sleep(retryDelay);
-            connection = openManifestResourceConnection(url, java.util.Collections.emptyMap());
+            connection = openManifestResourceConnection(url, java.util.Collections.emptyMap(), "");
             code = connection.getResponseCode();
         }
         InputStream input = code >= 400 ? connection.getErrorStream() : connection.getInputStream();
@@ -665,11 +671,11 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
         return code == 403 || code == 404 || code == 408 || code == 425 || code == 429 || code >= 500;
     }
 
-    private HttpURLConnection openManifestResourceConnection(String url, Map<String, String> headers) throws Exception {
+    private HttpURLConnection openManifestResourceConnection(String url, Map<String, String> headers, String userAgent) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(15_000);
         connection.setReadTimeout(30_000);
-        applyRequestHeaders(connection, headers, "");
+        applyRequestHeaders(connection, headers, userAgent);
         return connection;
     }
 

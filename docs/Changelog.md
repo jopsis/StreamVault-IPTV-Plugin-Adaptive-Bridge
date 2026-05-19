@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Matched Kodi `inputstream.adaptive` header scoping more closely: `common_headers` apply everywhere, `manifest_headers` are used for manifest downloads, and `stream_headers` are used for media resources.
+- Proxied DASH ClearKey media resources when stream-scoped headers are present, so playback no longer depends on the host player preserving those headers across local manifest redirects.
 - Rewrote the public README and changelog in English for a broader audience.
 - Removed the duplicate misspelled `docs/Chagelog.md` file.
 - Updated repository guidance to use only the canonical `docs/Changelog.md`.

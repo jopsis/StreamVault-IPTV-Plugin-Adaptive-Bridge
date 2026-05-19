@@ -73,21 +73,49 @@ final class KodiPropsM3uParser {
         String manifestUrl = urlAndHeaders.url.trim();
         if (!isHttpUrl(manifestUrl)) return null;
 
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.common_headers")));
-        headers.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.manifest_headers")));
-        headers.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.stream_headers")));
-        headers.putAll(pending.headers);
-        headers.putAll(urlAndHeaders.headers);
-        String userAgent = firstNonBlank(
+        Map<String, String> commonHeaders = new LinkedHashMap<>();
+        commonHeaders.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.common_headers")));
+        commonHeaders.putAll(pending.headers);
+        commonHeaders.putAll(urlAndHeaders.headers);
+        String commonUserAgent = firstNonBlank(
                 pending.userAgent,
-                headers.get("User-Agent"),
-                headers.get("user-agent"),
+                commonHeaders.get("User-Agent"),
+                commonHeaders.get("user-agent"),
                 globalUserAgent
         );
-        if (!userAgent.isEmpty()) {
-            headers.put("User-Agent", userAgent);
+        if (!commonUserAgent.isEmpty()) {
+            commonHeaders.put("User-Agent", commonUserAgent);
         }
+        Map<String, String> manifestHeaders = new LinkedHashMap<>(commonHeaders);
+        manifestHeaders.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.manifest_headers")));
+        String manifestUserAgent = firstNonBlank(
+                manifestHeaders.get("User-Agent"),
+                manifestHeaders.get("user-agent"),
+                commonUserAgent
+        );
+        if (!manifestUserAgent.isEmpty()) {
+            manifestHeaders.put("User-Agent", manifestUserAgent);
+        }
+
+        Map<String, String> streamHeaders = new LinkedHashMap<>(commonHeaders);
+        Map<String, String> explicitStreamHeaders = parseHeaderProperty(pending.props.get("inputstream.adaptive.stream_headers"));
+        if (explicitStreamHeaders.isEmpty()) {
+            streamHeaders.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.manifest_headers")));
+        } else {
+            streamHeaders.putAll(explicitStreamHeaders);
+        }
+        String streamUserAgent = firstNonBlank(
+                streamHeaders.get("User-Agent"),
+                streamHeaders.get("user-agent"),
+                commonUserAgent
+        );
+        if (!streamUserAgent.isEmpty()) {
+            streamHeaders.put("User-Agent", streamUserAgent);
+        }
+
+        Map<String, String> headers = new LinkedHashMap<>(manifestHeaders);
+        headers.putAll(streamHeaders);
+        String userAgent = firstNonBlank(streamUserAgent, manifestUserAgent, commonUserAgent);
         String manifestType = firstNonBlank(
                 pending.props.get("inputstream.adaptive.manifest_type"),
                 pending.props.get("manifest_type"),
@@ -105,6 +133,10 @@ final class KodiPropsM3uParser {
                 manifestType,
                 userAgent,
                 headers,
+                manifestUserAgent,
+                manifestHeaders,
+                streamUserAgent,
+                streamHeaders,
                 drm
         );
     }
