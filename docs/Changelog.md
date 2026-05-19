@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.21-beta.1 - 2026-05-19
+
+### Changed
+
+- Preserved no-`User-Agent` HTTP behavior for DASH ClearKey manifests and media resources when playlists do not declare a user agent, including retrying alternate A records after CDN 5xx responses.
+- Updated the beta plugin version to `1.1.21-beta.1` (`versionCode` 25).
+
+### Validation
+
+- Installed the debug APK on a Chromecast test device and verified a user-supplied DASH ClearKey playlist parses to 16 channels, serves rewritten MPDs, returns local ClearKey JWK responses, and proxies initialization resources.
+- Completed `graphify update .`.
+- Completed the debug build and confirmed version `1.1.21-beta.1` (`versionCode` 25).
+
 ## 1.1.20-beta.2 - 2026-05-19
 
 ### Changed

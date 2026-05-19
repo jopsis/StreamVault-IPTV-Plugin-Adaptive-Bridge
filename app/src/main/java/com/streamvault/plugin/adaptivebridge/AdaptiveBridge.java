@@ -10,15 +10,23 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -35,8 +43,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     private static final AtomicReference<AdaptiveBridge> INSTANCE = new AtomicReference<>();
-    private static final String VERSION_NAME = "1.1.20-beta.2";
-    private static final int VERSION_CODE = 24;
+    private static final String VERSION_NAME = "1.1.21-beta.1";
+    private static final int VERSION_CODE = 25;
     private static final String DEFAULT_USER_AGENT = "StreamVault-AdaptiveBridge/" + VERSION_NAME;
     private static final long MANIFEST_FRESH_CACHE_MS = 3_000L;
     private static final long MANIFEST_STALE_FALLBACK_MS = 30_000L;
@@ -352,7 +360,7 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
         if (channel == null) {
             throw new IllegalArgumentException("Channel not found");
         }
-        resolveDashClearKeyHeaderMode(channel);
+        preferNoUserAgentDashProxy(channel);
         DownloadResult manifest = cachedOrDownloadManifest(channel);
         rememberManifestResourceBase(channel, manifest.finalUrl);
         if (channel.needsDashClearKeyManifestProxy() &&
@@ -526,12 +534,21 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     private void resolveDashClearKeyHeaderMode(AdaptiveChannel channel) {
         if (channel == null || !channel.needsDashClearKeyManifestProxy()) return;
         if (dashClearKeyNoHeaderMode.containsKey(channel.id)) return;
+        if (preferNoUserAgentDashProxy(channel)) return;
         if (httpStatus(channel.manifestUrl, channel.manifestHeaders, channel.manifestUserAgent) < 400) {
             dashClearKeyNoHeaderMode.put(channel.id, dashResourcesPreferNoHeaderMode(channel));
             return;
         }
         boolean noHeadersWorks = httpStatus(channel.manifestUrl, java.util.Collections.emptyMap(), "") < 400;
         dashClearKeyNoHeaderMode.put(channel.id, noHeadersWorks);
+    }
+
+    private boolean preferNoUserAgentDashProxy(AdaptiveChannel channel) {
+        if (channel == null || !channel.needsDashClearKeyManifestProxy()) return false;
+        if (channel.hasStreamRequestHeaders()) return false;
+        if (!canUseRawHttpWithoutUserAgent(channel.manifestUrl, channel.streamHeaders, channel.streamUserAgent)) return false;
+        dashClearKeyNoHeaderMode.put(channel.id, true);
+        return true;
     }
 
     private boolean dashResourcesPreferNoHeaderMode(AdaptiveChannel channel) {
@@ -614,6 +631,13 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     }
 
     private int httpStatus(String url, Map<String, String> headers, String userAgent) {
+        if (canUseRawHttpWithoutUserAgent(url, headers, userAgent)) {
+            try (RawHttpResponse response = openRawHttpResponse(url, headers, 3_000, 5_000)) {
+                return response.code;
+            } catch (Exception ignored) {
+                return 599;
+            }
+        }
         HttpURLConnection connection = null;
         try {
             connection = (HttpURLConnection) new URL(url).openConnection();
@@ -638,6 +662,24 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
             upstreamHeaders = streamHeaders;
         }
         String upstreamUserAgent = usesNoHeaderDashMode(channel) ? "" : channel.streamUserAgent;
+        if (canUseRawHttpWithoutUserAgent(url, upstreamHeaders, upstreamUserAgent)) {
+            AdaptiveLocalServer.ProxiedResource resource = openRawManifestResource(url, upstreamHeaders);
+            int code = resource.code;
+            if (code >= 400 && !upstreamHeaders.isEmpty()) {
+                resource.close();
+                resource = openRawManifestResource(url, java.util.Collections.emptyMap());
+                code = resource.code;
+            }
+            long[] retryDelays = new long[]{250L, 750L};
+            for (long retryDelay : retryDelays) {
+                if (!isTransientResourceStatus(code)) break;
+                resource.close();
+                Thread.sleep(retryDelay);
+                resource = openRawManifestResource(url, java.util.Collections.emptyMap());
+                code = resource.code;
+            }
+            return resource;
+        }
         HttpURLConnection connection = openManifestResourceConnection(url, upstreamHeaders, upstreamUserAgent);
         int code = connection.getResponseCode();
         if (code >= 400 && !upstreamHeaders.isEmpty()) {
@@ -679,6 +721,18 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
         return connection;
     }
 
+    private AdaptiveLocalServer.ProxiedResource openRawManifestResource(String url, Map<String, String> headers) throws Exception {
+        RawHttpResponse response = openRawHttpResponse(url, headers, 15_000, 30_000);
+        return new AdaptiveLocalServer.ProxiedResource(
+                response.code,
+                response.contentType,
+                response.contentLength,
+                response.headers,
+                response.input,
+                response
+        );
+    }
+
     private Map<String, String> proxyRequestHeaders(Map<String, String> requestHeaders) {
         Map<String, String> headers = new java.util.LinkedHashMap<>();
         copyRequestHeader(requestHeaders, headers, "range", "Range");
@@ -710,6 +764,309 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
         return headers;
     }
 
+    private boolean canUseRawHttpWithoutUserAgent(String url, Map<String, String> headers, String userAgent) {
+        String lower = url == null ? "" : url.trim().toLowerCase(Locale.ROOT);
+        if (!lower.startsWith("http://")) return false;
+        if (userAgent != null && !userAgent.trim().isEmpty()) return false;
+        if (headers == null) return true;
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            if (entry.getKey() == null || !"User-Agent".equalsIgnoreCase(entry.getKey())) continue;
+            return entry.getValue() == null || entry.getValue().trim().isEmpty();
+        }
+        return true;
+    }
+
+    private RawHttpResponse openRawHttpResponse(
+            String url,
+            Map<String, String> headers,
+            int connectTimeoutMs,
+            int readTimeoutMs
+    ) throws Exception {
+        URL current = new URL(url);
+        for (int redirect = 0; redirect < 5; redirect++) {
+            RawHttpResponse response = openRawHttpResponseOnce(current, headers, connectTimeoutMs, readTimeoutMs);
+            if (!isRedirect(response.code)) {
+                return response;
+            }
+            String location = headerValue(response.headers, "Location");
+            if (location.isEmpty()) {
+                return response;
+            }
+            response.close();
+            current = new URL(current, location);
+            if (!"http".equalsIgnoreCase(current.getProtocol())) {
+                throw new IOException("Unsupported redirect protocol");
+            }
+        }
+        throw new IOException("Too many redirects");
+    }
+
+    private List<InetAddress> resolveRawHttpAddresses(String host) throws Exception {
+        Map<String, InetAddress> addresses = new java.util.LinkedHashMap<>();
+        for (InetAddress address : InetAddress.getAllByName(host)) {
+            addresses.put(address.getHostAddress(), address);
+        }
+        if (addresses.size() < 2) {
+            for (String resolver : new String[]{"1.1.1.1", "8.8.8.8"}) {
+                for (InetAddress address : queryDnsA(host, resolver)) {
+                    addresses.put(address.getHostAddress(), address);
+                }
+                if (addresses.size() >= 2) break;
+            }
+        }
+        return new ArrayList<>(addresses.values());
+    }
+
+    private List<InetAddress> queryDnsA(String host, String resolver) {
+        List<InetAddress> addresses = new ArrayList<>();
+        if (host == null || host.trim().isEmpty()) return addresses;
+        try (DatagramSocket socket = new DatagramSocket()) {
+            socket.setSoTimeout(1_500);
+            byte[] query = dnsQuery(host.trim());
+            DatagramPacket request = new DatagramPacket(
+                    query,
+                    query.length,
+                    InetAddress.getByName(resolver),
+                    53
+            );
+            socket.send(request);
+            byte[] response = new byte[512];
+            DatagramPacket packet = new DatagramPacket(response, response.length);
+            socket.receive(packet);
+            addresses.addAll(parseDnsAResponse(query, packet.getData(), packet.getLength()));
+        } catch (Exception ignored) {
+        }
+        return addresses;
+    }
+
+    private byte[] dnsQuery(String host) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        int id = (int) (System.nanoTime() & 0xffff);
+        writeDnsShort(output, id);
+        writeDnsShort(output, 0x0100);
+        writeDnsShort(output, 1);
+        writeDnsShort(output, 0);
+        writeDnsShort(output, 0);
+        writeDnsShort(output, 0);
+        for (String label : host.split("\\.")) {
+            byte[] bytes = label.getBytes(StandardCharsets.ISO_8859_1);
+            if (bytes.length == 0 || bytes.length > 63) throw new IOException("invalid DNS label");
+            output.write(bytes.length);
+            output.write(bytes, 0, bytes.length);
+        }
+        output.write(0);
+        writeDnsShort(output, 1);
+        writeDnsShort(output, 1);
+        return output.toByteArray();
+    }
+
+    private List<InetAddress> parseDnsAResponse(byte[] query, byte[] response, int length) throws Exception {
+        List<InetAddress> addresses = new ArrayList<>();
+        if (length < 12 || query.length < 2) return addresses;
+        if (response[0] != query[0] || response[1] != query[1]) return addresses;
+        int questionCount = dnsShort(response, 4);
+        int answerCount = dnsShort(response, 6);
+        int offset = 12;
+        for (int i = 0; i < questionCount; i++) {
+            offset = skipDnsName(response, offset, length) + 4;
+            if (offset > length) return addresses;
+        }
+        for (int i = 0; i < answerCount && offset < length; i++) {
+            offset = skipDnsName(response, offset, length);
+            if (offset + 10 > length) return addresses;
+            int type = dnsShort(response, offset);
+            int recordClass = dnsShort(response, offset + 2);
+            int dataLength = dnsShort(response, offset + 8);
+            offset += 10;
+            if (offset + dataLength > length) return addresses;
+            if (type == 1 && recordClass == 1 && dataLength == 4) {
+                addresses.add(InetAddress.getByAddress(Arrays.copyOfRange(response, offset, offset + 4)));
+            }
+            offset += dataLength;
+        }
+        return addresses;
+    }
+
+    private int skipDnsName(byte[] data, int offset, int length) throws IOException {
+        while (offset < length) {
+            int labelLength = data[offset] & 0xff;
+            if ((labelLength & 0xc0) == 0xc0) {
+                if (offset + 1 >= length) throw new IOException("invalid DNS pointer");
+                return offset + 2;
+            }
+            if (labelLength == 0) return offset + 1;
+            offset += labelLength + 1;
+        }
+        throw new IOException("invalid DNS name");
+    }
+
+    private int dnsShort(byte[] data, int offset) {
+        return ((data[offset] & 0xff) << 8) | (data[offset + 1] & 0xff);
+    }
+
+    private void writeDnsShort(ByteArrayOutputStream output, int value) {
+        output.write((value >>> 8) & 0xff);
+        output.write(value & 0xff);
+    }
+
+    private RawHttpResponse openRawHttpResponseOnce(
+            URL url,
+            Map<String, String> headers,
+            int connectTimeoutMs,
+            int readTimeoutMs
+    ) throws Exception {
+        if (!"http".equalsIgnoreCase(url.getProtocol())) {
+            throw new IOException("Unsupported raw HTTP protocol");
+        }
+        List<InetAddress> addresses = resolveRawHttpAddresses(url.getHost());
+        Exception firstError = null;
+        RawHttpResponse lastServerError = null;
+        for (InetAddress address : addresses) {
+            try {
+                RawHttpResponse response = openRawHttpResponseOnce(
+                        url,
+                        address,
+                        headers,
+                        connectTimeoutMs,
+                        readTimeoutMs
+                );
+                if (response.code < 500) {
+                    if (lastServerError != null) lastServerError.close();
+                    return response;
+                }
+                if (lastServerError != null) lastServerError.close();
+                lastServerError = response;
+            } catch (Exception error) {
+                if (firstError == null) firstError = error;
+            }
+        }
+        if (lastServerError != null) return lastServerError;
+        throw firstError == null ? new IOException("HTTP connection failed") : firstError;
+    }
+
+    private RawHttpResponse openRawHttpResponseOnce(
+            URL url,
+            InetAddress address,
+            Map<String, String> headers,
+            int connectTimeoutMs,
+            int readTimeoutMs
+    ) throws Exception {
+        Socket socket = new Socket();
+        socket.connect(new InetSocketAddress(address, portOrDefault(url)), connectTimeoutMs);
+        socket.setSoTimeout(readTimeoutMs);
+        StringBuilder request = new StringBuilder();
+        request.append("GET ").append(requestPath(url)).append(" HTTP/1.1\r\n");
+        request.append("Host: ").append(hostHeader(url)).append("\r\n");
+        request.append("Accept: */*\r\n");
+        if (headers != null) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                String name = entry.getKey();
+                String value = sanitizeHeaderValue(entry.getValue());
+                if (name == null || value.isEmpty()) continue;
+                String lower = name.toLowerCase(Locale.ROOT);
+                if (lower.equals("host") || lower.equals("connection") ||
+                        lower.equals("accept-encoding") || lower.equals("user-agent")) {
+                    continue;
+                }
+                request.append(name).append(": ").append(value).append("\r\n");
+            }
+        }
+        request.append("\r\n");
+        socket.getOutputStream().write(request.toString().getBytes(StandardCharsets.ISO_8859_1));
+        socket.getOutputStream().flush();
+
+        BufferedInputStream input = new BufferedInputStream(socket.getInputStream());
+        String statusLine = readAsciiLine(input);
+        if (statusLine.isEmpty()) {
+            socket.close();
+            throw new IOException("Empty HTTP response");
+        }
+        String[] statusParts = statusLine.split(" ", 3);
+        int code = statusParts.length > 1 ? Integer.parseInt(statusParts[1]) : 599;
+        Map<String, String> responseHeaders = new java.util.LinkedHashMap<>();
+        String line;
+        while (!(line = readAsciiLine(input)).isEmpty()) {
+            int colon = line.indexOf(':');
+            if (colon <= 0) continue;
+            String name = line.substring(0, colon).trim();
+            String value = line.substring(colon + 1).trim();
+            if (!name.isEmpty() && !responseHeaders.containsKey(name)) {
+                responseHeaders.put(name, value);
+            }
+        }
+
+        long contentLength = parseContentLength(headerValue(responseHeaders, "Content-Length"));
+        InputStream body = input;
+        if ("chunked".equalsIgnoreCase(headerValue(responseHeaders, "Transfer-Encoding"))) {
+            body = new ChunkedInputStream(input);
+        } else if (contentLength >= 0L) {
+            body = new FixedLengthInputStream(input, contentLength);
+        }
+        return new RawHttpResponse(
+                code,
+                headerValue(responseHeaders, "Content-Type"),
+                contentLength,
+                responseHeaders,
+                body,
+                socket,
+                url.toString()
+        );
+    }
+
+    private boolean isRedirect(int code) {
+        return code == 301 || code == 302 || code == 303 || code == 307 || code == 308;
+    }
+
+    private int portOrDefault(URL url) {
+        int port = url.getPort();
+        return port > 0 ? port : 80;
+    }
+
+    private String hostHeader(URL url) {
+        int port = url.getPort();
+        String host = url.getHost();
+        return port > 0 && port != 80 ? host + ":" + port : host;
+    }
+
+    private String requestPath(URL url) {
+        String file = url.getFile();
+        return file == null || file.isEmpty() ? "/" : file;
+    }
+
+    private String headerValue(Map<String, String> headers, String name) {
+        if (headers == null || name == null) return "";
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            if (entry.getKey() != null && name.equalsIgnoreCase(entry.getKey())) {
+                return entry.getValue() == null ? "" : entry.getValue().trim();
+            }
+        }
+        return "";
+    }
+
+    private String sanitizeHeaderValue(String value) {
+        return value == null ? "" : value.replace("\r", "").replace("\n", "").trim();
+    }
+
+    private long parseContentLength(String value) {
+        if (value == null || value.trim().isEmpty()) return -1L;
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ignored) {
+            return -1L;
+        }
+    }
+
+    private String readAsciiLine(InputStream input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        int value;
+        while ((value = input.read()) >= 0) {
+            if (value == '\n') break;
+            if (value != '\r') output.write(value);
+            if (output.size() > 16 * 1024) throw new IOException("HTTP line too long");
+        }
+        return output.toString(StandardCharsets.ISO_8859_1.name());
+    }
+
     private String downloadText(String url) throws Exception {
         return downloadText(url, null, DEFAULT_USER_AGENT);
     }
@@ -719,6 +1076,14 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     }
 
     private DownloadResult downloadTextResult(String url, Map<String, String> headers, String userAgent) throws Exception {
+        if (canUseRawHttpWithoutUserAgent(url, headers, userAgent)) {
+            try (RawHttpResponse response = openRawHttpResponse(url, headers, 15_000, 30_000)) {
+                if (response.code < 200 || response.code >= 300) {
+                    throw new IllegalStateException("HTTP " + response.code);
+                }
+                return new DownloadResult(readAllText(response.input), response.finalUrl);
+            }
+        }
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(15_000);
         connection.setReadTimeout(30_000);
@@ -836,6 +1201,136 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
         DownloadResult(String text, String finalUrl) {
             this.text = text == null ? "" : text;
             this.finalUrl = finalUrl == null ? "" : finalUrl;
+        }
+    }
+
+    private static final class RawHttpResponse implements AutoCloseable {
+        final int code;
+        final String contentType;
+        final long contentLength;
+        final Map<String, String> headers;
+        final InputStream input;
+        final String finalUrl;
+        private final Socket socket;
+
+        RawHttpResponse(
+                int code,
+                String contentType,
+                long contentLength,
+                Map<String, String> headers,
+                InputStream input,
+                Socket socket,
+                String finalUrl
+        ) {
+            this.code = code;
+            this.contentType = contentType == null ? "" : contentType;
+            this.contentLength = contentLength;
+            this.headers = headers == null ? java.util.Collections.emptyMap() : headers;
+            this.input = input;
+            this.socket = socket;
+            this.finalUrl = finalUrl == null ? "" : finalUrl;
+        }
+
+        @Override
+        public void close() throws Exception {
+            if (input != null) input.close();
+            if (socket != null) socket.close();
+        }
+    }
+
+    private static final class ChunkedInputStream extends InputStream {
+        private final InputStream input;
+        private long remaining;
+        private boolean finished;
+
+        ChunkedInputStream(InputStream input) {
+            this.input = input;
+        }
+
+        @Override
+        public int read() throws IOException {
+            byte[] one = new byte[1];
+            int read = read(one, 0, 1);
+            return read < 0 ? -1 : one[0] & 0xff;
+        }
+
+        @Override
+        public int read(byte[] buffer, int offset, int length) throws IOException {
+            if (finished) return -1;
+            if (length == 0) return 0;
+            if (remaining == 0L) {
+                readNextChunkSize();
+                if (finished) return -1;
+            }
+            int read = input.read(buffer, offset, (int) Math.min(length, remaining));
+            if (read < 0) {
+                finished = true;
+                return -1;
+            }
+            remaining -= read;
+            if (remaining == 0L) {
+                readChunkTerminator();
+            }
+            return read;
+        }
+
+        private void readNextChunkSize() throws IOException {
+            String line = readAsciiLineStatic(input).trim();
+            int extension = line.indexOf(';');
+            if (extension >= 0) line = line.substring(0, extension).trim();
+            if (line.isEmpty()) throw new IOException("empty chunk size");
+            remaining = Long.parseLong(line, 16);
+            if (remaining == 0L) {
+                while (!readAsciiLineStatic(input).isEmpty()) {
+                    // Drain trailers.
+                }
+                finished = true;
+            }
+        }
+
+        private void readChunkTerminator() throws IOException {
+            String line = readAsciiLineStatic(input);
+            if (!line.isEmpty()) throw new IOException("invalid chunk terminator");
+        }
+
+        private static String readAsciiLineStatic(InputStream input) throws IOException {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            int value;
+            while ((value = input.read()) >= 0) {
+                if (value == '\n') break;
+                if (value != '\r') output.write(value);
+                if (output.size() > 16 * 1024) throw new IOException("HTTP line too long");
+            }
+            return output.toString(StandardCharsets.ISO_8859_1.name());
+        }
+    }
+
+    private static final class FixedLengthInputStream extends InputStream {
+        private final InputStream input;
+        private long remaining;
+
+        FixedLengthInputStream(InputStream input, long length) {
+            this.input = input;
+            this.remaining = Math.max(0L, length);
+        }
+
+        @Override
+        public int read() throws IOException {
+            byte[] one = new byte[1];
+            int read = read(one, 0, 1);
+            return read < 0 ? -1 : one[0] & 0xff;
+        }
+
+        @Override
+        public int read(byte[] buffer, int offset, int length) throws IOException {
+            if (remaining <= 0L) return -1;
+            int read = input.read(buffer, offset, (int) Math.min(length, remaining));
+            if (read < 0) {
+                remaining = 0L;
+                return -1;
+            }
+            remaining -= read;
+            return read;
         }
     }
 
