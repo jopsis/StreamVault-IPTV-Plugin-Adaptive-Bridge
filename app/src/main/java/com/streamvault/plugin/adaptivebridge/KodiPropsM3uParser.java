@@ -73,21 +73,49 @@ final class KodiPropsM3uParser {
         String manifestUrl = urlAndHeaders.url.trim();
         if (!isHttpUrl(manifestUrl)) return null;
 
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.common_headers")));
-        headers.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.manifest_headers")));
-        headers.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.stream_headers")));
-        headers.putAll(pending.headers);
-        headers.putAll(urlAndHeaders.headers);
-        String userAgent = firstNonBlank(
+        Map<String, String> commonHeaders = new LinkedHashMap<>();
+        commonHeaders.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.common_headers")));
+        commonHeaders.putAll(pending.headers);
+        commonHeaders.putAll(urlAndHeaders.headers);
+        String commonUserAgent = firstNonBlank(
                 pending.userAgent,
-                headers.get("User-Agent"),
-                headers.get("user-agent"),
+                commonHeaders.get("User-Agent"),
+                commonHeaders.get("user-agent"),
                 globalUserAgent
         );
-        if (!userAgent.isEmpty()) {
-            headers.put("User-Agent", userAgent);
+        if (!commonUserAgent.isEmpty()) {
+            commonHeaders.put("User-Agent", commonUserAgent);
         }
+        Map<String, String> manifestHeaders = new LinkedHashMap<>(commonHeaders);
+        manifestHeaders.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.manifest_headers")));
+        String manifestUserAgent = firstNonBlank(
+                manifestHeaders.get("User-Agent"),
+                manifestHeaders.get("user-agent"),
+                commonUserAgent
+        );
+        if (!manifestUserAgent.isEmpty()) {
+            manifestHeaders.put("User-Agent", manifestUserAgent);
+        }
+
+        Map<String, String> streamHeaders = new LinkedHashMap<>(commonHeaders);
+        Map<String, String> explicitStreamHeaders = parseHeaderProperty(pending.props.get("inputstream.adaptive.stream_headers"));
+        if (explicitStreamHeaders.isEmpty()) {
+            streamHeaders.putAll(parseHeaderProperty(pending.props.get("inputstream.adaptive.manifest_headers")));
+        } else {
+            streamHeaders.putAll(explicitStreamHeaders);
+        }
+        String streamUserAgent = firstNonBlank(
+                streamHeaders.get("User-Agent"),
+                streamHeaders.get("user-agent"),
+                commonUserAgent
+        );
+        if (!streamUserAgent.isEmpty()) {
+            streamHeaders.put("User-Agent", streamUserAgent);
+        }
+
+        Map<String, String> headers = new LinkedHashMap<>(manifestHeaders);
+        headers.putAll(streamHeaders);
+        String userAgent = firstNonBlank(streamUserAgent, manifestUserAgent, commonUserAgent);
         String manifestType = firstNonBlank(
                 pending.props.get("inputstream.adaptive.manifest_type"),
                 pending.props.get("manifest_type"),
@@ -105,6 +133,10 @@ final class KodiPropsM3uParser {
                 manifestType,
                 userAgent,
                 headers,
+                manifestUserAgent,
+                manifestHeaders,
+                streamUserAgent,
+                streamHeaders,
                 drm
         );
     }
@@ -112,6 +144,12 @@ final class KodiPropsM3uParser {
     private AdaptiveChannel.Drm parseDrm(PendingEntry pending) throws Exception {
         AdaptiveChannel.Drm drmFromJson = parseDrmJson(pending.props.get("inputstream.adaptive.drm"));
         if (drmFromJson != null) return drmFromJson;
+
+        AdaptiveChannel.Drm drmFromLegacy = parseDrmLegacy(firstNonBlank(
+                pending.props.get("inputstream.adaptive.drm_legacy"),
+                pending.props.get("drm_legacy")
+        ));
+        if (drmFromLegacy != null) return drmFromLegacy;
 
         String licenseType = firstNonBlank(
                 pending.props.get("inputstream.adaptive.license_type"),
@@ -144,16 +182,39 @@ final class KodiPropsM3uParser {
         return licenseUrl.isEmpty() ? null : new AdaptiveChannel.Drm(scheme, licenseUrl, licenseHeaders, true, new ArrayList<>());
     }
 
+    private AdaptiveChannel.Drm parseDrmLegacy(String raw) throws Exception {
+        if (raw == null || raw.trim().isEmpty()) return null;
+        String[] fields = raw.split("\\|", -1);
+        if (fields.length == 0 || fields.length > 3) return null;
+
+        String scheme = drmScheme(fields[0].trim().toLowerCase(Locale.ROOT));
+        if (scheme.isEmpty()) return null;
+
+        String license = fields.length > 1 ? fields[1].trim() : "";
+        Map<String, String> headers = fields.length > 2 ? parseHeaderProperty(fields[2]) : new LinkedHashMap<>();
+        if ("CLEARKEY".equals(scheme)) {
+            if (license.isEmpty()) {
+                return new AdaptiveChannel.Drm(scheme, "", headers, false, new ArrayList<>());
+            }
+            if (looksLikeHttp(license)) {
+                return new AdaptiveChannel.Drm(scheme, license, headers, false, new ArrayList<>());
+            }
+            List<AdaptiveChannel.ClearKey> keys = parseClearKeys(license);
+            return keys.isEmpty()
+                    ? new AdaptiveChannel.Drm(scheme, license, headers, false, new ArrayList<>())
+                    : new AdaptiveChannel.Drm(scheme, "", headers, false, keys);
+        }
+
+        return license.isEmpty() ? null : new AdaptiveChannel.Drm(scheme, license, headers, true, new ArrayList<>());
+    }
+
     private AdaptiveChannel.Drm parseDrmJson(String raw) throws Exception {
         if (raw == null || raw.trim().isEmpty()) return null;
         String text = raw.trim();
         if (!text.startsWith("{")) return null;
         JSONObject root = new JSONObject(text);
         if (root.has("org.w3.clearkey")) {
-            Object value = root.get("org.w3.clearkey");
-            String keyText = value instanceof JSONObject ? ((JSONObject) value).toString() : String.valueOf(value);
-            List<AdaptiveChannel.ClearKey> keys = parseClearKeysFromJson(keyText);
-            return new AdaptiveChannel.Drm("CLEARKEY", "", new LinkedHashMap<>(), false, keys);
+            return parseClearKeyDrmJson(root.get("org.w3.clearkey"));
         }
         if (root.has("com.widevine.alpha")) {
             DrmJsonParts parts = parseDrmJsonParts(root.get("com.widevine.alpha"));
@@ -164,6 +225,63 @@ final class KodiPropsM3uParser {
             return parts.licenseUrl.isEmpty() ? null : new AdaptiveChannel.Drm("PLAYREADY", parts.licenseUrl, parts.headers, true, new ArrayList<>());
         }
         return null;
+    }
+
+    private AdaptiveChannel.Drm parseClearKeyDrmJson(Object value) throws Exception {
+        Map<String, String> headers = new LinkedHashMap<>();
+        List<AdaptiveChannel.ClearKey> keys = new ArrayList<>();
+        String licenseUrl = "";
+
+        if (value instanceof JSONObject) {
+            JSONObject object = (JSONObject) value;
+            if (object.has("license")) {
+                Object license = object.get("license");
+                if (license instanceof JSONObject) {
+                    JSONObject licenseJson = (JSONObject) license;
+                    if (licenseJson.has("headers")) {
+                        JSONObject headersJson = licenseJson.optJSONObject("headers");
+                        if (headersJson != null) headers.putAll(jsonToMap(headersJson));
+                    }
+                    licenseUrl = firstNonBlank(
+                            licenseJson.optString("server_url", ""),
+                            licenseJson.optString("serverUrl", ""),
+                            licenseJson.optString("url", "")
+                    );
+                    keys.addAll(parseClearKeysFromJson(licenseJson.toString()));
+                } else {
+                    licenseUrl = String.valueOf(license);
+                }
+            }
+
+            licenseUrl = firstNonBlank(
+                    licenseUrl,
+                    object.optString("server_url", ""),
+                    object.optString("serverUrl", ""),
+                    object.optString("license_url", ""),
+                    object.optString("licenseUrl", ""),
+                    object.optString("url", "")
+            );
+            if (keys.isEmpty()) {
+                keys.addAll(parseClearKeysFromJson(object.toString()));
+            }
+        } else {
+            String rawValue = String.valueOf(value).trim();
+            if (looksLikeHttp(rawValue)) {
+                licenseUrl = rawValue;
+            } else {
+                keys.addAll(parseClearKeys(rawValue));
+                if (keys.isEmpty()) licenseUrl = rawValue;
+            }
+        }
+
+        if (!licenseUrl.isEmpty() && looksLikeDataUri(licenseUrl)) {
+            List<AdaptiveChannel.ClearKey> dataKeys = parseClearKeys(licenseUrl);
+            if (!dataKeys.isEmpty()) {
+                keys = dataKeys;
+                licenseUrl = "";
+            }
+        }
+        return new AdaptiveChannel.Drm("CLEARKEY", keys.isEmpty() ? licenseUrl : "", headers, false, keys);
     }
 
     private DrmJsonParts parseDrmJsonParts(Object value) throws Exception {
@@ -198,6 +316,21 @@ final class KodiPropsM3uParser {
         String text = raw.trim();
         List<AdaptiveChannel.ClearKey> result = new ArrayList<>();
         JSONObject json = new JSONObject(text);
+        if (json.has("license") && json.optJSONObject("license") != null) {
+            result.addAll(parseClearKeysFromJson(json.optJSONObject("license").toString()));
+            if (!result.isEmpty()) return result;
+        }
+        JSONObject keyIds = json.optJSONObject("keyids");
+        if (keyIds != null) {
+            result.addAll(parseClearKeysFromJson(keyIds.toString()));
+            if (!result.isEmpty()) return result;
+        }
+        String jwkKid = firstNonBlank(json.optString("kid", ""), json.optString("keyid", ""));
+        String jwkKey = firstNonBlank(json.optString("k", ""), json.optString("key", ""));
+        if (!jwkKid.isEmpty() && !jwkKey.isEmpty()) {
+            result.add(clearKey(jwkKid, jwkKey));
+            return result;
+        }
         JSONArray keys = json.optJSONArray("keys");
         if (keys != null) {
             for (int i = 0; i < keys.length(); i++) {
@@ -206,7 +339,11 @@ final class KodiPropsM3uParser {
                 String kid = firstNonBlank(key.optString("kid", ""), key.optString("keyid", ""));
                 String value = firstNonBlank(key.optString("k", ""), key.optString("key", ""));
                 if (!kid.isEmpty() && !value.isEmpty()) {
-                    result.add(clearKey(kid, value));
+                    try {
+                        result.add(clearKey(kid, value));
+                    } catch (Exception ignored) {
+                        // Keep parsing other JWK entries if one pair is malformed.
+                    }
                 }
             }
             return result;
@@ -217,6 +354,7 @@ final class KodiPropsM3uParser {
             for (int i = 0; i < names.length(); i++) {
                 String kid = names.optString(i, "");
                 String value = json.optString(kid, "");
+                if (isClearKeyMetadataField(kid)) continue;
                 if (kid.isEmpty() || value.isEmpty()) continue;
                 try {
                     result.add(clearKey(kid, value));
@@ -232,7 +370,13 @@ final class KodiPropsM3uParser {
         List<AdaptiveChannel.ClearKey> keys = new ArrayList<>();
         if (raw == null || raw.trim().isEmpty()) return keys;
         String text = raw.trim();
+        if (looksLikeDataUri(text)) {
+            String decoded = decodeDataUriText(text);
+            return decoded.isEmpty() ? keys : parseClearKeys(decoded);
+        }
         if (text.startsWith("{")) return parseClearKeysFromJson(text);
+        String decodedJson = decodeBase64Json(text);
+        if (!decodedJson.isEmpty()) return parseClearKeysFromJson(decodedJson);
         text = text.replace('\n', ',').replace(';', ',');
         for (String part : text.split(",")) {
             String trimmed = part.trim();
@@ -256,7 +400,11 @@ final class KodiPropsM3uParser {
     }
 
     private byte[] decodeHexOrBase64Url(String value) {
-        String normalized = value.trim().replace("-", "").replace("urn:uuid:", "");
+        String original = stripQuotes(value);
+        String normalized = original.trim()
+                .replace("urn:uuid:", "")
+                .replace("-", "")
+                .replaceAll("\\s+", "");
         if (normalized.matches("(?i)[0-9a-f]{32}")) {
             byte[] bytes = new byte[16];
             for (int i = 0; i < 16; i++) {
@@ -264,7 +412,87 @@ final class KodiPropsM3uParser {
             }
             return bytes;
         }
-        return Base64.decode(value.trim(), Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
+        return decodeBase64Bytes(original);
+    }
+
+    private byte[] decodeBase64Bytes(String value) {
+        byte[] bytes = decodeBase64Payload(value);
+        if (bytes.length != 16) {
+            throw new IllegalArgumentException("ClearKey value must decode to 16 bytes");
+        }
+        return bytes;
+    }
+
+    private byte[] decodeBase64Payload(String value) {
+        String compact = stripQuotes(value).replaceAll("\\s+", "");
+        if (compact.isEmpty()) throw new IllegalArgumentException("empty ClearKey value");
+        String padded = padBase64(compact);
+        IllegalArgumentException failure = null;
+        int[] flags = new int[]{
+                Base64.URL_SAFE | Base64.NO_WRAP,
+                Base64.DEFAULT
+        };
+        for (int flag : flags) {
+            try {
+                return Base64.decode(padded, flag);
+            } catch (IllegalArgumentException error) {
+                failure = error;
+            }
+        }
+        throw failure == null ? new IllegalArgumentException("invalid base64") : failure;
+    }
+
+    private String padBase64(String value) {
+        int mod = value.length() % 4;
+        if (mod == 0) return value;
+        if (mod == 1) throw new IllegalArgumentException("invalid base64 length");
+        StringBuilder padded = new StringBuilder(value);
+        for (int i = 0; i < 4 - mod; i++) padded.append('=');
+        return padded.toString();
+    }
+
+    private String decodeDataUriText(String value) {
+        int comma = value.indexOf(',');
+        if (comma < 0) return "";
+        String metadata = value.substring(5, comma).toLowerCase(Locale.ROOT);
+        String data = value.substring(comma + 1);
+        try {
+            if (metadata.contains(";base64")) {
+                return new String(decodeBase64Payload(data), StandardCharsets.UTF_8);
+            }
+            return URLDecoder.decode(data, "UTF-8");
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private String decodeBase64Json(String value) {
+        try {
+            String decoded = new String(decodeBase64Payload(value), StandardCharsets.UTF_8).trim();
+            return decoded.startsWith("{") ? decoded : "";
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private boolean looksLikeDataUri(String value) {
+        String lower = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        return lower.startsWith("data:");
+    }
+
+    private boolean isClearKeyMetadataField(String value) {
+        String lower = value == null ? "" : value.toLowerCase(Locale.ROOT);
+        return lower.equals("type") ||
+                lower.equals("kty") ||
+                lower.equals("license") ||
+                lower.equals("keyids") ||
+                lower.equals("keys") ||
+                lower.equals("headers") ||
+                lower.equals("server_url") ||
+                lower.equals("serverurl") ||
+                lower.equals("license_url") ||
+                lower.equals("licenseurl") ||
+                lower.equals("url");
     }
 
     private String toHex(byte[] bytes) {

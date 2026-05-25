@@ -23,6 +23,10 @@ final class AdaptiveChannel {
     final String manifestType;
     final String userAgent;
     final Map<String, String> headers;
+    final String manifestUserAgent;
+    final Map<String, String> manifestHeaders;
+    final String streamUserAgent;
+    final Map<String, String> streamHeaders;
     final Drm drm;
 
     AdaptiveChannel(
@@ -35,6 +39,10 @@ final class AdaptiveChannel {
             String manifestType,
             String userAgent,
             Map<String, String> headers,
+            String manifestUserAgent,
+            Map<String, String> manifestHeaders,
+            String streamUserAgent,
+            Map<String, String> streamHeaders,
             Drm drm
     ) {
         this.id = id;
@@ -46,6 +54,10 @@ final class AdaptiveChannel {
         this.manifestType = manifestType;
         this.userAgent = userAgent;
         this.headers = headers == null ? Collections.emptyMap() : Collections.unmodifiableMap(new LinkedHashMap<>(headers));
+        this.manifestUserAgent = manifestUserAgent == null ? "" : manifestUserAgent;
+        this.manifestHeaders = manifestHeaders == null ? Collections.emptyMap() : Collections.unmodifiableMap(new LinkedHashMap<>(manifestHeaders));
+        this.streamUserAgent = streamUserAgent == null ? "" : streamUserAgent;
+        this.streamHeaders = streamHeaders == null ? Collections.emptyMap() : Collections.unmodifiableMap(new LinkedHashMap<>(streamHeaders));
         this.drm = drm;
     }
 
@@ -78,6 +90,10 @@ final class AdaptiveChannel {
 
     boolean needsManifestProxy() {
         return needsSmoothStreamingClearKeyManifestProxy() || needsDashClearKeyManifestProxy();
+    }
+
+    boolean hasStreamRequestHeaders() {
+        return !streamHeaders.isEmpty() || !streamUserAgent.isEmpty();
     }
 
     String playbackUrl(String localBaseUrl) {
