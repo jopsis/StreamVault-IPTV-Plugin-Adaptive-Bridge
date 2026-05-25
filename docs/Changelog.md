@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.21 - 2026-05-25
+
+### Changed
+
+- Promoted `1.1.21` to the stable release channel by removing the beta suffix.
+- Updated the stable plugin version to `1.1.21` (`versionCode` 26).
+
+### Validation
+
+- Completed `graphify update .`.
+- Completed the debug build and confirmed version `1.1.21` (`versionCode` 26).
+
 ## 1.1.21-beta.1 - 2026-05-19
 
 ### Changed

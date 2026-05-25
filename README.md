@@ -13,7 +13,7 @@ StreamVault Adaptive Bridge is a companion plugin for StreamVault IPTV. It impor
 
 The plugin does not include channels, playlists, keys, tokens, or preconfigured content. Users must provide their own authorized sources by remote URL, local file, absolute path, or Android `content://` URI.
 
-Current plugin version: `1.1.20-beta.2` (`versionCode` 24).
+Current plugin version: `1.1.21` (`versionCode` 26).
 
 ## Features
 
