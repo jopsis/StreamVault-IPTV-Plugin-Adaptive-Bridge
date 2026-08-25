@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.22 - 2026-08-24
+
+### Fixed
+
+- Declared `playbackUrlSchemes: ["http"]` and `playbackUrlHosts: ["127.0.0.1"]` in the plugin manifest (both the live `MSG_GET_MANIFEST` response and the static `MANIFEST_JSON` fallback metadata). StreamVault's playback-prepare routing treats an absent scheme/host as owning nothing rather than a wildcard, so without this the host app never called `MSG_PREPARE_PLAYBACK` for this plugin's own `http://127.0.0.1:<port>/play/{id}` URLs and every channel fell through to StreamVault's generic extractors instead of this plugin's DRM-aware manifest/license proxy — silently breaking `playback.prepare` for every user despite it being advertised as a capability.
+- Updated the plugin version to `1.1.22` (`versionCode` 27).
+
+### Validation
+
+- Confirmed against StreamVault-IPTV's `PluginPlaybackRouting.kt` (`playbackCandidates`/`ownsPlaybackUrl`) that scheme+host ownership is required and that `AdaptiveLocalServer` only ever binds to `http://127.0.0.1:<port>`, so this is the correct and complete set of routing metadata for this plugin.
+- Not build-tested locally (no Android SDK / Android Studio JBR available in this environment); the change is additive JSON fields matching the existing builder pattern used immediately above for `capabilities`.
+
 ## 1.1.21 - 2026-05-25
 
 ### Changed

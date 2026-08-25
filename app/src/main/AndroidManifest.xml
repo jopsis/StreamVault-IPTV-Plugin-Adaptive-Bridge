@@ -41,7 +41,7 @@
             </intent-filter>
             <meta-data
                 android:name="com.streamvault.plugin.MANIFEST_JSON"
-                android:value="{&quot;schemaVersion&quot;:1,&quot;id&quot;:&quot;com.streamvault.plugins.adaptivebridge&quot;,&quot;name&quot;:&quot;StreamVault Adaptive Bridge&quot;,&quot;versionName&quot;:&quot;1.1.21&quot;,&quot;versionCode&quot;:26,&quot;description&quot;:&quot;Bridge for Kodi inputstream.adaptive-style M3U/KODIPROP sources in StreamVault.&quot;,&quot;providerName&quot;:&quot;StreamVault Adaptive Bridge&quot;,&quot;configurationMode&quot;:&quot;activity&quot;,&quot;configurationActivityAction&quot;:&quot;com.streamvault.plugin.adaptivebridge.CONFIGURE&quot;,&quot;capabilities&quot;:[&quot;provider.m3u&quot;,&quot;playback.prepare&quot;,&quot;configuration.activity&quot;]}" />
+                android:value="{&quot;schemaVersion&quot;:1,&quot;id&quot;:&quot;com.streamvault.plugins.adaptivebridge&quot;,&quot;name&quot;:&quot;StreamVault Adaptive Bridge&quot;,&quot;versionName&quot;:&quot;1.1.22&quot;,&quot;versionCode&quot;:27,&quot;description&quot;:&quot;Bridge for Kodi inputstream.adaptive-style M3U/KODIPROP sources in StreamVault.&quot;,&quot;providerName&quot;:&quot;StreamVault Adaptive Bridge&quot;,&quot;configurationMode&quot;:&quot;activity&quot;,&quot;configurationActivityAction&quot;:&quot;com.streamvault.plugin.adaptivebridge.CONFIGURE&quot;,&quot;capabilities&quot;:[&quot;provider.m3u&quot;,&quot;playback.prepare&quot;,&quot;configuration.activity&quot;],&quot;playbackUrlSchemes&quot;:[&quot;http&quot;],&quot;playbackUrlHosts&quot;:[&quot;127.0.0.1&quot;]}" />
             <meta-data
                 android:name="com.streamvault.plugin.ID"
                 android:value="com.streamvault.plugins.adaptivebridge" />
@@ -50,10 +50,10 @@
                 android:value="StreamVault Adaptive Bridge" />
             <meta-data
                 android:name="com.streamvault.plugin.VERSION_NAME"
-                android:value="1.1.21" />
+                android:value="1.1.22" />
             <meta-data
                 android:name="com.streamvault.plugin.VERSION_CODE"
-                android:value="26" />
+                android:value="27" />
             <meta-data
                 android:name="com.streamvault.plugin.DESCRIPTION"
                 android:value="Bridge for Kodi inputstream.adaptive-style M3U/KODIPROP sources in StreamVault." />

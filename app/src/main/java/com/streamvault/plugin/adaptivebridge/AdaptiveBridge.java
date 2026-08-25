@@ -43,8 +43,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
     private static final AtomicReference<AdaptiveBridge> INSTANCE = new AtomicReference<>();
-    private static final String VERSION_NAME = "1.1.21";
-    private static final int VERSION_CODE = 26;
+    private static final String VERSION_NAME = "1.1.22";
+    private static final int VERSION_CODE = 27;
     private static final String DEFAULT_USER_AGENT = "StreamVault-AdaptiveBridge/" + VERSION_NAME;
     private static final long MANIFEST_FRESH_CACHE_MS = 3_000L;
     private static final long MANIFEST_STALE_FALLBACK_MS = 30_000L;
@@ -263,7 +263,16 @@ final class AdaptiveBridge implements AdaptiveLocalServer.Handler {
                 .put("capabilities", new JSONArray()
                         .put("provider.m3u")
                         .put("playback.prepare")
-                        .put("configuration.activity"));
+                        .put("configuration.activity"))
+                // AdaptiveLocalServer only ever binds to plain-HTTP loopback (see PREFERRED_PORT
+                // handling in AdaptiveLocalServer), so every URL this plugin ever hands back to
+                // StreamVault for playback lives under http://127.0.0.1:<port>/play/{id}. Without
+                // declaring that ownership, StreamVault's playback-prepare routing (which treats
+                // absent scheme/host metadata as "owns nothing", not a wildcard) never calls this
+                // plugin, and playback falls through to StreamVault's generic extractors instead
+                // of the DRM-aware manifest/license proxy.
+                .put("playbackUrlSchemes", new JSONArray().put("http"))
+                .put("playbackUrlHosts", new JSONArray().put("127.0.0.1"));
     }
 
     JSONObject configurationSchema() throws Exception {
